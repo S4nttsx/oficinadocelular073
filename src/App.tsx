@@ -42,19 +42,35 @@ export default function App() {
   
   // Client-side filtering logic
   const produtos = useMemo(() => {
-    const selectedBind = BINDS.find(b => b.id === selectedBindId);
-    
-    return PRODUTOS_ESTATICOS.filter(p => {
-      const matchesSearch = !search || 
-        p.nome_completo.toLowerCase().includes(search.toLowerCase()) ||
-        p.modelo_base.toLowerCase().includes(search.toLowerCase()) ||
-        p.marca.toLowerCase().includes(search.toLowerCase());
+    try {
+      if (!Array.isArray(PRODUTOS_ESTATICOS)) return [];
       
-      const matchesMarca = selectedMarca === 'Todas' || p.marca === selectedMarca;
-      const matchesCategoria = !selectedBind || selectedBind.categorias.includes(p.categoria);
+      const selectedBind = selectedBindId ? BINDS.find(b => b.id === selectedBindId) : null;
+      const searchTerm = (search || '').toLowerCase().trim();
       
-      return matchesSearch && matchesMarca && matchesCategoria;
-    });
+      return PRODUTOS_ESTATICOS.filter(p => {
+        if (!p) return false;
+
+        // Safety check to ensure product properties exist
+        const nomeCompleto = (p.nome_completo || '').toLowerCase();
+        const modeloBase = (p.modelo_base || '').toLowerCase();
+        const marca = (p.marca || '').toLowerCase();
+
+        const matchesSearch = !searchTerm || 
+          nomeCompleto.includes(searchTerm) ||
+          modeloBase.includes(searchTerm) ||
+          marca.includes(searchTerm);
+        
+        const matchesMarca = selectedMarca === 'Todas' || p.marca === selectedMarca;
+        
+        const matchesCategoria = !selectedBind || (p.categoria && selectedBind.categorias.includes(p.categoria));
+        
+        return matchesSearch && matchesMarca && matchesCategoria;
+      });
+    } catch (error) {
+      console.error("Erro ao filtrar produtos:", error);
+      return [];
+    }
   }, [search, selectedMarca, selectedBindId]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -354,14 +370,13 @@ Aguardo retorno.`;
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <AnimatePresence mode="popLayout">
+              <AnimatePresence>
                 {produtos.map((p) => (
                   <motion.div 
                     key={p.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col group"
                   >
                     <div className="flex justify-between items-start mb-4">
