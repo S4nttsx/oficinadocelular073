@@ -1,29 +1,34 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ShoppingCart, Trash2, Phone, ShieldCheck, Smartphone, Info, X, Check, ArrowRight, Menu, ClipboardList, Battery, Layers, Filter, Wrench, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { PRODUTOS_ESTATICOS, type Produto } from './data/produtos';
 
-interface Combo {
-  id: string;
-  nome: string;
-  descricao: string;
-  itens: string[];
+interface Produto {
+  id: number;
+  modelo_id: number;
+  nome_completo: string;
+  categoria: 'TELA' | 'BATERIA' | 'CONECTOR' | 'DOCK' | 'TAMPA' | 'CARCACA' | 'SERVICO';
+  tecnologia: 'INCELL' | 'OLED' | null;
+  possui_aro: number;
+  nivel_dificuldade: string;
+  exige_remocao_tela: number;
+  marca_nome: string;
+  modelo_nome: string;
+  estoque_atual?: number;
 }
 
-const BINDS: Combo[] = [
-  { id: 'b1', nome: 'Telas', descricao: 'Todas as Telas', itens: ['TELA'] },
-  { id: 'b2', nome: 'Baterias', descricao: 'Baterias Disponíveis', itens: ['BATERIA'] },
-  { id: 'b3', nome: 'Docks', descricao: 'Docks de Carga', itens: ['DOCK'] },
-  { id: 'b4', nome: 'Conectores', descricao: 'Serviços de Carga', itens: ['SERVICO'] },
-  { id: 'b5', nome: 'Tampas', descricao: 'Troca de Tampa', itens: ['TAMPA'] },
-  { id: 'b6', nome: 'Carcaças', descricao: 'Troca de Carcaça', itens: ['CARCACA'] },
-];
+interface Bind {
+  id: string;
+  nome: string;
+  categorias: string[];
+}
 
-const COMBOS_ESPECIAIS: Combo[] = [
-  { id: 'c1', nome: 'Combo 1', descricao: 'Tela + Tampa Traseira', itens: ['TELA', 'TAMPA'] },
-  { id: 'c2', nome: 'Combo 2', descricao: 'Tela + Bateria + Tampa', itens: ['TELA', 'BATERIA', 'TAMPA'] },
-  { id: 'c3', nome: 'Combo 3', descricao: 'Carcaça + Tela', itens: ['CARCACA', 'TELA'] },
-  { id: 'c4', nome: 'Combo 4', descricao: 'Bateria + Conector + Tampa', itens: ['BATERIA', 'SERVICO', 'TAMPA'] },
+const BINDS: Bind[] = [
+  { id: 'b1', nome: 'Telas', categorias: ['TELA'] },
+  { id: 'b2', nome: 'Baterias', categorias: ['BATERIA'] },
+  { id: 'b3', nome: 'Conectores', categorias: ['CONECTOR'] },
+  { id: 'b4', nome: 'Dock de Carga', categorias: ['DOCK'] },
+  { id: 'b5', nome: 'Tampas', categorias: ['TAMPA'] },
+  { id: 'b6', nome: 'Carcaças', categorias: ['CARCACA'] },
 ];
 
 interface CartItem extends Produto {
@@ -45,6 +50,7 @@ const MARCAS = ['Todas', 'Apple', 'Samsung', 'Motorola', 'LG', 'Xiaomi', 'Redmi'
 export default function App() {
   const [search, setSearch] = useState('');
   const [selectedMarca, setSelectedMarca] = useState('Todas');
+  const [selectedCategoria, setSelectedCategoria] = useState<string | null>(null);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -62,29 +68,17 @@ export default function App() {
   // Aro selection state
   const [selectingAroFor, setSelectingAroFor] = useState<Produto | null>(null);
 
-  // Filter products locally for static hosting compatibility
+  // Fetch products from API
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      const filtered = PRODUTOS_ESTATICOS.filter(p => {
-        const matchesMarca = selectedMarca === 'Todas' || p.marca === selectedMarca;
-        const matchesSearch = search.length < 2 || 
-          p.nome_completo.toLowerCase().includes(search.toLowerCase()) || 
-          p.modelo_base.toLowerCase().includes(search.toLowerCase());
-        
-        return matchesMarca && matchesSearch;
-      });
-
-      // Sort and limit like the API did
-      const sorted = filtered.sort((a, b) => {
-        if (a.categoria !== b.categoria) return b.categoria.localeCompare(a.categoria);
-        return a.modelo_base.localeCompare(b.modelo_base);
-      }).slice(0, 100);
-
-      setProdutos(sorted);
+      const categoryParam = selectedCategoria ? `&categoria=${selectedCategoria}` : '';
+      fetch(`/api/produtos?q=${search}&marca=${selectedMarca}${categoryParam}`)
+        .then(res => res.json())
+        .then(data => setProdutos(data));
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, selectedMarca]);
+  }, [search, selectedMarca, selectedCategoria]);
 
   const addToCart = (produto: Produto, aro?: 'Com aro' | 'Sem aro') => {
     setCart(prev => {
@@ -113,16 +107,10 @@ export default function App() {
       return;
     }
 
-    const screens = cart.filter(i => i.categoria === 'TELA');
-    const batteries = cart.filter(i => i.categoria === 'BATERIA');
-    const docks = cart.filter(i => i.categoria === 'DOCK');
-    const services = cart.filter(i => i.categoria === 'SERVICO');
-    const covers = cart.filter(i => i.categoria === 'TAMPA');
-    const housings = cart.filter(i => i.categoria === 'CARCACA');
-
     const formatList = (items: CartItem[]) => items.map(item => {
       const details = item.aro ? ` (${item.aro})` : '';
-      return `- ${item.nome_completo}${details} (x${item.quantity})`;
+      const tech = item.tecnologia ? ` [${item.tecnologia}]` : '';
+      return `- ${item.nome_completo}${tech}${details} (x${item.quantity})`;
     }).join('\n');
 
     const message = `Olá, tudo bem?
@@ -131,13 +119,7 @@ Gostaria de solicitar orçamento para os seguintes serviços/produtos:
 Modelo do aparelho: ${customer.modelo_aparelho}
 
 Itens escolhidos:
-
-${screens.length > 0 ? `[TELAS]\n${formatList(screens)}\n` : ''}
-${batteries.length > 0 ? `[BATERIAS]\n${formatList(batteries)}\n` : ''}
-${docks.length > 0 ? `[DOCKS DE CARGA]\n${formatList(docks)}\n` : ''}
-${services.length > 0 ? `[SERVIÇOS DE CARGA]\n${formatList(services)}\n` : ''}
-${covers.length > 0 ? `[TAMPAS TRASEIRAS]\n${formatList(covers)}\n` : ''}
-${housings.length > 0 ? `[CARCAÇAS]\n${formatList(housings)}\n` : ''}
+${formatList(cart)}
 
 Dados do cliente:
 Nome: ${customer.nome}
@@ -300,71 +282,40 @@ Aguardo retorno.`;
           <div className="lg:col-span-3 space-y-8">
             {/* Binds Section */}
             <div className="space-y-4">
-              <div className="flex items-center gap-3 px-2">
-                <Layers className="w-5 h-5 text-purple-600" />
-                <h3 className="text-2xl font-black text-blue-950">Binds por Categoria</h3>
+              <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-3">
+                  <Layers className="w-5 h-5 text-blue-500" />
+                  <h3 className="text-2xl font-black text-blue-950">Filtros Rápidos</h3>
+                </div>
+                {selectedCategoria && (
+                  <button 
+                    onClick={() => setSelectedCategoria(null)}
+                    className="text-xs font-black text-red-500 uppercase tracking-widest hover:underline"
+                  >
+                    Limpar Filtro
+                  </button>
+                )}
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                 {BINDS.map((bind) => (
                   <button
                     key={bind.id}
-                    onClick={() => {
-                      const matches = produtos.filter(p => bind.itens.includes(p.categoria));
-                      if (matches.length > 0) {
-                        matches.forEach(match => {
-                          if (match.categoria === 'TELA') {
-                            setSelectingAroFor(match);
-                          } else {
-                            addToCart(match);
-                          }
-                        });
-                      } else {
-                        alert(`Nenhum item de ${bind.nome} encontrado para este modelo.`);
-                      }
-                    }}
-                    className="bg-white border-2 border-slate-100 p-4 rounded-3xl text-left hover:border-blue-600 hover:shadow-lg transition-all group relative overflow-hidden"
-                  >
-                    <p className="text-[10px] font-black uppercase tracking-widest mb-1 text-slate-400 group-hover:text-blue-600">{bind.nome}</p>
-                    <h4 className="text-sm font-black text-blue-950 leading-tight">{bind.descricao}</h4>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Combos Especiais */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 px-2">
-                <ShoppingCart className="w-5 h-5 text-emerald-600" />
-                <h3 className="text-2xl font-black text-blue-950">Combos Especiais</h3>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {COMBOS_ESPECIAIS.map((combo) => (
-                  <button
-                    key={combo.id}
-                    onClick={() => {
-                      combo.itens.forEach(cat => {
-                        const match = produtos.find(p => p.categoria === cat);
-                        if (match) {
-                          if (cat === 'TELA') {
-                            setSelectingAroFor(match);
-                          } else {
-                            addToCart(match);
-                          }
-                        }
-                      });
-                      if (!produtos.some(p => combo.itens.includes(p.categoria))) {
-                        alert("Pesquise um modelo específico para adicionar o combo correspondente.");
-                      }
-                    }}
-                    className="bg-gradient-to-br from-blue-900 to-blue-950 p-6 rounded-[2rem] text-white text-left hover:shadow-2xl hover:-translate-y-1 transition-all group relative overflow-hidden"
+                    onClick={() => setSelectedCategoria(bind.categorias[0])}
+                    className={`p-6 rounded-[2rem] text-left transition-all group relative overflow-hidden ${
+                      selectedCategoria === bind.categorias[0] 
+                        ? 'bg-blue-600 text-white shadow-xl scale-[1.02]' 
+                        : 'bg-blue-900 text-white hover:shadow-2xl hover:-translate-y-1'
+                    }`}
                   >
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
                       <Layers className="w-12 h-12" />
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">{combo.nome}</p>
-                    <h4 className="text-lg font-black leading-tight mb-2">{combo.descricao}</h4>
-                    <div className="flex items-center gap-2 text-[10px] font-bold bg-white/10 w-fit px-3 py-1 rounded-full">
-                      Adicionar Combo <ArrowRight className="w-3 h-3" />
+                    <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Categoria</p>
+                    <h4 className="text-sm font-black leading-tight mb-2">{bind.nome}</h4>
+                    <div className={`flex items-center gap-2 text-[10px] font-bold w-fit px-3 py-1 rounded-full ${
+                      selectedCategoria === bind.categorias[0] ? 'bg-white/20' : 'bg-white/10'
+                    }`}>
+                      {selectedCategoria === bind.categorias[0] ? 'Selecionado' : 'Visualizar'} <ArrowRight className="w-3 h-3" />
                     </div>
                   </button>
                 ))}
@@ -398,29 +349,29 @@ Aguardo retorno.`;
                       <div className={`p-3 rounded-2xl ${
                         p.categoria === 'TELA' ? 'bg-blue-50 text-blue-600' : 
                         p.categoria === 'BATERIA' ? 'bg-amber-50 text-amber-600' : 
-                        p.categoria === 'DOCK' ? 'bg-emerald-50 text-emerald-600' :
+                        p.categoria === 'CONECTOR' || p.categoria === 'DOCK' ? 'bg-emerald-50 text-emerald-600' :
                         p.categoria === 'TAMPA' ? 'bg-rose-50 text-rose-600' :
                         p.categoria === 'CARCACA' ? 'bg-slate-50 text-slate-600' :
-                        'bg-purple-50 text-purple-600'
+                        'bg-blue-50 text-blue-900'
                       }`}>
                         {p.categoria === 'TELA' ? <Layers className="w-6 h-6" /> : 
                          p.categoria === 'BATERIA' ? <Battery className="w-6 h-6" /> : 
-                         p.categoria === 'DOCK' ? <Wrench className="w-6 h-6" /> :
+                         p.categoria === 'CONECTOR' || p.categoria === 'DOCK' ? <Wrench className="w-6 h-6" /> :
                          p.categoria === 'TAMPA' ? <ShieldCheck className="w-6 h-6" /> :
                          p.categoria === 'CARCACA' ? <Smartphone className="w-6 h-6" /> :
-                         <Phone className="w-6 h-6" />}
+                         <Wrench className="w-6 h-6" />}
                       </div>
                       <div className="flex flex-col items-end">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 group-hover:text-blue-400 transition-colors">
-                          {p.marca}
+                          {p.marca_nome || p.marca}
                         </span>
-                        {p.dificuldade && (
+                        {p.nivel_dificuldade && (
                           <span className={`text-[8px] font-black uppercase mt-1 px-2 py-0.5 rounded-full ${
-                            p.dificuldade === 'Alta' ? 'bg-red-100 text-red-600' :
-                            p.dificuldade === 'Média' ? 'bg-amber-100 text-amber-600' :
+                            p.nivel_dificuldade === 'Alto' ? 'bg-red-100 text-red-600' :
+                            p.nivel_dificuldade === 'Médio' ? 'bg-amber-100 text-amber-600' :
                             'bg-emerald-100 text-emerald-600'
                           }`}>
-                            Dificuldade: {p.dificuldade}
+                            Dificuldade: {p.nivel_dificuldade}
                           </span>
                         )}
                       </div>
@@ -428,8 +379,14 @@ Aguardo retorno.`;
 
                     <div className="flex-1">
                       <h4 className="font-black text-lg text-blue-950 mb-1 leading-tight">{p.nome_completo}</h4>
-                      <p className="text-slate-400 text-xs font-bold uppercase tracking-tighter mb-4">{p.modelo_base}</p>
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-tighter mb-2">{p.modelo_nome || p.modelo_base}</p>
                       
+                      {p.estoque !== undefined && (
+                        <p className={`text-[10px] font-black uppercase mb-4 ${p.estoque > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          Estoque: {p.estoque > 0 ? `${p.estoque} unidades` : 'Esgotado'}
+                        </p>
+                      )}
+
                       {p.exige_remocao_tela === 1 && (
                         <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
                           <Info className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
@@ -439,10 +396,10 @@ Aguardo retorno.`;
                         </div>
                       )}
                       
-                      {p.categoria === 'TELA' && (
+                      {p.categoria === 'TELA' && p.tecnologia && (
                         <div className="flex gap-2 mb-4">
-                          <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${p.tipo_tela === 'OLED' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {p.tipo_tela}
+                          <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${p.tecnologia === 'OLED' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {p.tecnologia}
                           </span>
                         </div>
                       )}
@@ -500,7 +457,7 @@ Aguardo retorno.`;
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-blue-950">Opções de Montagem</h3>
-                  <p className="text-slate-500 text-sm mt-2">Selecione como deseja a tela para {selectingAroFor.modelo_base}</p>
+                  <p className="text-slate-500 text-sm mt-2">Selecione como deseja a tela para {selectingAroFor.modelo_nome}</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
@@ -586,17 +543,17 @@ Aguardo retorno.`;
                       <div className={`p-3 rounded-2xl h-fit ${
                         item.categoria === 'TELA' ? 'bg-blue-100 text-blue-600' : 
                         item.categoria === 'BATERIA' ? 'bg-amber-100 text-amber-600' : 
-                        item.categoria === 'DOCK' ? 'bg-emerald-100 text-emerald-600' :
+                        item.categoria === 'CONECTOR' || item.categoria === 'DOCK' ? 'bg-emerald-100 text-emerald-600' :
                         item.categoria === 'TAMPA' ? 'bg-rose-100 text-rose-600' :
                         item.categoria === 'CARCACA' ? 'bg-slate-100 text-slate-600' :
-                        'bg-purple-100 text-purple-600'
+                        'bg-blue-100 text-blue-900'
                       }`}>
                         {item.categoria === 'TELA' ? <Layers className="w-5 h-5" /> : 
                          item.categoria === 'BATERIA' ? <Battery className="w-5 h-5" /> : 
-                         item.categoria === 'DOCK' ? <Wrench className="w-5 h-5" /> :
+                         item.categoria === 'CONECTOR' || item.categoria === 'DOCK' ? <Wrench className="w-5 h-5" /> :
                          item.categoria === 'TAMPA' ? <ShieldCheck className="w-5 h-5" /> :
                          item.categoria === 'CARCACA' ? <Smartphone className="w-5 h-5" /> :
-                         <Phone className="w-5 h-5" />}
+                         <Wrench className="w-5 h-5" />}
                       </div>
                       <div className="flex-1">
                         <h4 className="font-black text-blue-950 leading-tight">{item.nome_completo}</h4>

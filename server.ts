@@ -9,13 +9,17 @@ const __dirname = path.dirname(__filename);
 
 const db = new Database("estoque.db");
 
-// Check if we need to migrate (drop and recreate if 'categoria' is missing)
+// Check if we need to migrate (drop and recreate if columns are missing)
 const tableInfo = db.prepare("PRAGMA table_info(produtos)").all() as any[];
-const hasCategoria = tableInfo.some(col => col.name === 'categoria');
+const hasNivelDificuldade = tableInfo.some(col => col.name === 'nivel_dificuldade');
+const hasNome = tableInfo.some(col => col.name === 'nome');
 
-if (tableInfo.length > 0 && !hasCategoria) {
-  console.log("Old schema detected. Dropping table to recreate with 'categoria' column.");
-  db.exec("DROP TABLE produtos");
+if (tableInfo.length > 0 && (!hasNivelDificuldade || !hasNome)) {
+  console.log("Old schema detected. Dropping tables to recreate with new structure.");
+  db.exec("DROP TABLE IF EXISTS estoque");
+  db.exec("DROP TABLE IF EXISTS produtos");
+  db.exec("DROP TABLE IF EXISTS modelos");
+  db.exec("DROP TABLE IF EXISTS marcas");
 }
 
 // Database Setup
@@ -38,9 +42,12 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS produtos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     modelo_id INTEGER NOT NULL,
-    categoria TEXT NOT NULL, -- 'TELA','BATERIA','CONECTOR','DOCK','TAMPA','CARCACA'
+    nome TEXT NOT NULL,
+    categoria TEXT NOT NULL, -- 'TELA','BATERIA','CONECTOR','DOCK','TAMPA','CARCACA','SERVICO'
     tecnologia TEXT, -- 'INCELL','OLED',NULL
     possui_aro INTEGER DEFAULT 0,
+    nivel_dificuldade TEXT DEFAULT 'Médio', -- 'Baixo', 'Médio', 'Alto'
+    exige_remocao_tela INTEGER DEFAULT 0,
     FOREIGN KEY (modelo_id) REFERENCES modelos(id)
   );
 
@@ -63,18 +70,6 @@ db.exec(`
     FOREIGN KEY (produto_id) REFERENCES produtos(id)
   );
 
-  CREATE TABLE IF NOT EXISTS binds (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS itens_bind (
-    bind_id INTEGER NOT NULL,
-    produto_id INTEGER NOT NULL,
-    FOREIGN KEY (bind_id) REFERENCES binds(id),
-    FOREIGN KEY (produto_id) REFERENCES produtos(id)
-  );
-
   CREATE INDEX IF NOT EXISTS idx_modelo_nome ON modelos(nome);
   CREATE INDEX IF NOT EXISTS idx_prod_cat ON produtos(categoria);
 `);
@@ -83,7 +78,7 @@ async function seedDatabase() {
   const count = db.prepare("SELECT COUNT(*) as count FROM marcas").get() as { count: number };
   if (count.count > 0) return;
 
-  console.log("Starting massive automated seeding...");
+  console.log("Starting professional distributor seeding...");
 
   const marcasData = ["Apple", "Samsung", "Motorola", "LG", "Xiaomi", "Redmi", "Realme"];
   const insertMarca = db.prepare("INSERT INTO marcas (nome) VALUES (?)");
@@ -96,62 +91,33 @@ async function seedDatabase() {
 
   const modelosData: { marca: string, nome: string, oled: boolean, glass: boolean }[] = [];
 
-  // Apple: 6 to 15
-  for (let i = 6; i <= 15; i++) {
-    const variants = i >= 12 ? ["", " Mini", " Pro", " Pro Max"] : (i >= 11 ? ["", " Pro", " Pro Max"] : ["", " Plus"]);
-    if (i === 10) { // iPhone X
-       modelosData.push({ marca: "Apple", nome: "iPhone X", oled: true, glass: true });
-       modelosData.push({ marca: "Apple", nome: "iPhone XR", oled: false, glass: true });
-       modelosData.push({ marca: "Apple", nome: "iPhone XS", oled: true, glass: true });
-       modelosData.push({ marca: "Apple", nome: "iPhone XS Max", oled: true, glass: true });
-       continue;
-    }
-    variants.forEach(v => {
-      modelosData.push({ 
-        marca: "Apple", 
-        nome: `iPhone ${i}${v}`, 
-        oled: i >= 12 || (i === 11 && v.includes("Pro")), 
-        glass: i >= 8 
-      });
+  // Apple
+  ["iPhone 6", "iPhone 7", "iPhone 8", "iPhone X", "iPhone XR", "iPhone XS", "iPhone 11", "iPhone 12", "iPhone 13", "iPhone 14", "iPhone 15"].forEach(m => {
+    modelosData.push({ 
+      marca: "Apple", 
+      nome: m, 
+      oled: m.includes("X") || parseInt(m.split(" ")[1]) >= 12, 
+      glass: parseInt(m.split(" ")[1]) >= 8 || m.includes("X")
     });
-  }
-
-  // Samsung: A, S, M
-  ["A", "S", "M"].forEach(line => {
-    for (let i = 1; i <= 70; i++) {
-      if (i % 10 === 0 || i < 20) {
-        modelosData.push({ 
-          marca: "Samsung", 
-          nome: `Galaxy ${line}${i.toString().padStart(2, '0')}`, 
-          oled: line === "S" || i > 30, 
-          glass: line === "S" 
-        });
-      }
-    }
   });
 
-  // Motorola: G, Edge, E
-  for (let i = 1; i <= 100; i += 10) {
-    modelosData.push({ marca: "Motorola", nome: `Moto G${i}`, oled: i > 50, glass: false });
-    modelosData.push({ marca: "Motorola", nome: `Moto Edge ${i}`, oled: true, glass: true });
-    modelosData.push({ marca: "Motorola", nome: `Moto E${i}`, oled: false, glass: false });
-  }
+  // Samsung
+  ["Galaxy A01", "Galaxy A10", "Galaxy A20", "Galaxy A30", "Galaxy A32", "Galaxy A50", "Galaxy S20", "Galaxy S21", "Galaxy S22", "Galaxy S23"].forEach(m => {
+    modelosData.push({ 
+      marca: "Samsung", 
+      nome: m, 
+      oled: m.includes("S") || (m.includes("A") && parseInt(m.substring(8)) >= 20), 
+      glass: m.includes("S")
+    });
+  });
 
-  // Xiaomi / Redmi / Realme
-  ["Xiaomi Mi", "Redmi Note", "Realme"].forEach(prefix => {
-    const marca = prefix.split(" ")[0];
-    for (let i = 1; i <= 13; i++) {
-      modelosData.push({ 
-        marca: marca, 
-        nome: `${prefix} ${i}`, 
-        oled: i > 9, 
-        glass: i > 10 
-      });
-    }
+  // Motorola
+  ["Moto G6", "Moto G7", "Moto G8", "Moto G9", "Moto G52", "Moto G84", "Moto Edge 30"].forEach(m => {
+    modelosData.push({ marca: "Motorola", nome: m, oled: m.includes("Edge") || m.includes("G52") || m.includes("G84"), glass: m.includes("Edge") });
   });
 
   const insertModelo = db.prepare("INSERT INTO modelos (marca_id, nome, possui_oled, possui_incell, tampa_vidro) VALUES (?, ?, ?, ?, ?)");
-  const insertProduto = db.prepare("INSERT INTO produtos (modelo_id, categoria, tecnologia, possui_aro) VALUES (?, ?, ?, ?)");
+  const insertProduto = db.prepare("INSERT INTO produtos (modelo_id, nome, categoria, tecnologia, possui_aro, nivel_dificuldade, exige_remocao_tela) VALUES (?, ?, ?, ?, ?, ?, ?)");
   const insertEstoque = db.prepare("INSERT INTO estoque (produto_id, quantidade, custo, preco_sugerido, fornecedor) VALUES (?, ?, ?, ?, ?)");
 
   db.transaction(() => {
@@ -160,44 +126,46 @@ async function seedDatabase() {
       const modRes = insertModelo.run(marcaId, m.nome, m.oled ? 1 : 0, 1, m.glass ? 1 : 0);
       const modeloId = modRes.lastInsertRowid as number;
 
-      // Telas Incell
-      const p1 = insertProduto.run(modeloId, 'TELA', 'INCELL', 1);
-      insertEstoque.run(p1.lastInsertRowid, 10, 50, 150, "Fornecedor A");
-      const p2 = insertProduto.run(modeloId, 'TELA', 'INCELL', 0);
-      insertEstoque.run(p2.lastInsertRowid, 15, 40, 120, "Fornecedor B");
-
-      // Telas OLED
+      // 📱 Telas
       if (m.oled) {
-        const p3 = insertProduto.run(modeloId, 'TELA', 'OLED', 1);
-        insertEstoque.run(p3.lastInsertRowid, 5, 150, 450, "Fornecedor Premium");
-        const p4 = insertProduto.run(modeloId, 'TELA', 'OLED', 0);
-        insertEstoque.run(p4.lastInsertRowid, 8, 130, 400, "Fornecedor Premium");
+        const p1 = insertProduto.run(modeloId, `Tela ${m.nome} OLED Com Aro`, 'TELA', 'OLED', 1, 'Médio', 0);
+        insertEstoque.run(p1.lastInsertRowid, 5, 150, 450, "Premium Parts");
+        const p2 = insertProduto.run(modeloId, `Tela ${m.nome} OLED Sem Aro`, 'TELA', 'OLED', 0, 'Médio', 0);
+        insertEstoque.run(p2.lastInsertRowid, 8, 130, 400, "Premium Parts");
       }
+      const p3 = insertProduto.run(modeloId, `Tela ${m.nome} INCELL Com Aro`, 'TELA', 'INCELL', 1, 'Médio', 0);
+      insertEstoque.run(p3.lastInsertRowid, 10, 50, 150, "Standard Parts");
+      const p4 = insertProduto.run(modeloId, `Tela ${m.nome} INCELL Sem Aro`, 'TELA', 'INCELL', 0, 'Médio', 0);
+      insertEstoque.run(p4.lastInsertRowid, 15, 40, 120, "Standard Parts");
 
-      // Bateria
-      const pb = insertProduto.run(modeloId, 'BATERIA', null, 0);
-      insertEstoque.run(pb.lastInsertRowid, 20, 30, 90, "Global Parts");
+      // 🔋 Baterias
+      const pb = insertProduto.run(modeloId, `Bateria ${m.nome}`, 'BATERIA', null, 0, 'Médio', 0);
+      insertEstoque.run(pb.lastInsertRowid, 20, 30, 90, "Global Battery");
 
-      // Conector / Dock
+      // 🔌 Conectores / Docks
       if (m.marca === "Apple") {
-        const pd = insertProduto.run(modeloId, 'DOCK', null, 0);
-        insertEstoque.run(pd.lastInsertRowid, 12, 25, 80, "Apple Parts");
-        const pc = insertProduto.run(modeloId, 'CARCACA', null, 0);
-        insertEstoque.run(pc.lastInsertRowid, 3, 100, 300, "Apple Parts");
+        const pd = insertProduto.run(modeloId, `Dock de Carga ${m.nome}`, 'DOCK', null, 0, 'Baixo', 0);
+        insertEstoque.run(pd.lastInsertRowid, 12, 25, 80, "Apple Original");
+        const pc = insertProduto.run(modeloId, `Carcaça Completa ${m.nome}`, 'CARCACA', null, 0, 'Alto', 0);
+        insertEstoque.run(pc.lastInsertRowid, 3, 100, 300, "Apple Original");
       } else {
-        const pc = insertProduto.run(modeloId, 'CONECTOR', null, 0);
-        insertEstoque.run(pc.lastInsertRowid, 50, 5, 45, "Generic Parts");
+        const isTypeC = !m.nome.includes("G6") && !m.nome.includes("J4");
+        const pc = insertProduto.run(modeloId, `Conector de Carga ${isTypeC ? 'Tipo-C' : 'Micro USB'} ${m.nome}`, 'CONECTOR', null, 0, 'Médio', 0);
+        insertEstoque.run(pc.lastInsertRowid, 50, 5, 45, "Generic Connectors");
       }
 
-      // Tampa
-      if (m.glass) {
-        const pt = insertProduto.run(modeloId, 'TAMPA', null, 0);
-        insertEstoque.run(pt.lastInsertRowid, 10, 20, 75, "Glass Tech");
-      }
+      // 🧱 Tampas
+      const pt = insertProduto.run(modeloId, `Tampa Traseira ${m.glass ? '(Vidro)' : ''} ${m.nome}`, 'TAMPA', null, 0, 'Baixo', 0);
+      insertEstoque.run(pt.lastInsertRowid, 10, 10, 60, "Cover Tech");
+
+      // 🔧 Serviços
+      const needsScreenRemoval = (m.marca === "Samsung" && m.nome.includes('Galaxy A')) || m.marca === 'Apple';
+      insertProduto.run(modeloId, `Troca de Conector ${m.nome}`, 'SERVICO', null, 0, 'Médio', needsScreenRemoval ? 1 : 0);
+      insertProduto.run(modeloId, `Limpeza Química em Placa ${m.nome}`, 'SERVICO', null, 0, 'Alto', 0);
     });
   })();
 
-  console.log(`Seeding complete. Generated ${modelosData.length} models and thousands of products.`);
+  console.log(`Seeding complete. Generated ${modelosData.length} models.`);
 }
 
 async function startServer() {
@@ -215,9 +183,11 @@ async function startServer() {
         p.categoria, 
         p.tecnologia as tipo_tela, 
         p.possui_aro,
+        p.nivel_dificuldade,
+        p.exige_remocao_tela,
         e.quantidade as estoque,
         e.preco_sugerido as preco,
-        (m.nome || ' ' || mod.nome || ' ' || p.categoria || ' ' || IFNULL(p.tecnologia, '')) as nome_completo
+        p.nome as nome_completo
       FROM produtos p
       JOIN modelos mod ON p.modelo_id = mod.id
       JOIN marcas m ON mod.marca_id = m.id
@@ -227,8 +197,8 @@ async function startServer() {
     const params: any[] = [];
 
     if (q) {
-      sql += " AND (mod.nome LIKE ? OR m.nome LIKE ?)";
-      params.push(`%${q}%`, `%${q}%`);
+      sql += " AND (p.nome LIKE ? OR mod.nome LIKE ? OR m.nome LIKE ?)";
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`);
     }
     if (marca && marca !== 'Todas') {
       sql += " AND m.nome = ?";
@@ -239,7 +209,7 @@ async function startServer() {
       params.push(categoria);
     }
 
-    sql += " ORDER BY p.categoria DESC, mod.nome ASC LIMIT 100";
+    sql += " ORDER BY p.categoria DESC, mod.nome ASC";
 
     const rows = db.prepare(sql).all(...params);
     res.json(rows);
