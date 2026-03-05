@@ -6,6 +6,9 @@ import {defineConfig, loadEnv} from 'vite';
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   return {
+    // Se for publicar no GitHub Pages em um subdiretório (ex: github.io/meu-projeto/),
+    // adicione a linha abaixo com o nome do seu repositório:
+    // base: '/nome-do-repositorio/',
     plugins: [react(), tailwindcss()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
