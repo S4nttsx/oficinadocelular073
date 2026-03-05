@@ -1,20 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ShoppingCart, Trash2, Phone, ShieldCheck, Smartphone, Info, X, Check, ArrowRight, Menu, ClipboardList, Battery, Layers, Filter, Wrench, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-interface Produto {
-  id: number;
-  modelo_id: number;
-  nome_completo: string;
-  categoria: 'TELA' | 'BATERIA' | 'CONECTOR' | 'DOCK' | 'TAMPA' | 'CARCACA' | 'SERVICO';
-  tecnologia: 'INCELL' | 'OLED' | null;
-  possui_aro: number;
-  nivel_dificuldade: string;
-  exige_remocao_tela: number;
-  marca_nome: string;
-  modelo_nome: string;
-  estoque_atual?: number;
-}
+import { PRODUTOS_ESTATICOS, Produto } from './data/produtos';
 
 interface Bind {
   id: string;
@@ -51,7 +38,22 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [selectedMarca, setSelectedMarca] = useState('Todas');
   const [selectedCategoria, setSelectedCategoria] = useState<string | null>(null);
-  const [produtos, setProdutos] = useState<Produto[]>([]);
+  
+  // Client-side filtering logic
+  const produtos = useMemo(() => {
+    return PRODUTOS_ESTATICOS.filter(p => {
+      const matchesSearch = !search || 
+        p.nome_completo.toLowerCase().includes(search.toLowerCase()) ||
+        p.modelo_base.toLowerCase().includes(search.toLowerCase()) ||
+        p.marca.toLowerCase().includes(search.toLowerCase());
+      
+      const matchesMarca = selectedMarca === 'Todas' || p.marca === selectedMarca;
+      const matchesCategoria = !selectedCategoria || p.categoria === selectedCategoria;
+      
+      return matchesSearch && matchesMarca && matchesCategoria;
+    });
+  }, [search, selectedMarca, selectedCategoria]);
+
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -67,18 +69,6 @@ export default function App() {
   
   // Aro selection state
   const [selectingAroFor, setSelectingAroFor] = useState<Produto | null>(null);
-
-  // Fetch products from API
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      const categoryParam = selectedCategoria ? `&categoria=${selectedCategoria}` : '';
-      fetch(`/api/produtos?q=${search}&marca=${selectedMarca}${categoryParam}`)
-        .then(res => res.json())
-        .then(data => setProdutos(data));
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [search, selectedMarca, selectedCategoria]);
 
   const addToCart = (produto: Produto, aro?: 'Com aro' | 'Sem aro') => {
     setCart(prev => {
@@ -363,7 +353,7 @@ Aguardo retorno.`;
                       </div>
                       <div className="flex flex-col items-end">
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 group-hover:text-blue-400 transition-colors">
-                          {p.marca_nome || p.marca}
+                          {p.marca}
                         </span>
                         {p.nivel_dificuldade && (
                           <span className={`text-[8px] font-black uppercase mt-1 px-2 py-0.5 rounded-full ${
@@ -379,9 +369,9 @@ Aguardo retorno.`;
 
                     <div className="flex-1">
                       <h4 className="font-black text-lg text-blue-950 mb-1 leading-tight">{p.nome_completo}</h4>
-                      <p className="text-slate-400 text-xs font-bold uppercase tracking-tighter mb-2">{p.modelo_nome || p.modelo_base}</p>
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-tighter mb-2">{p.modelo_base}</p>
                       
-                      {p.estoque !== undefined && (
+                      {p.estoque !== null && (
                         <p className={`text-[10px] font-black uppercase mb-4 ${p.estoque > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                           Estoque: {p.estoque > 0 ? `${p.estoque} unidades` : 'Esgotado'}
                         </p>
@@ -457,7 +447,7 @@ Aguardo retorno.`;
                 </div>
                 <div>
                   <h3 className="text-2xl font-black text-blue-950">Opções de Montagem</h3>
-                  <p className="text-slate-500 text-sm mt-2">Selecione como deseja a tela para {selectingAroFor.modelo_nome}</p>
+                  <p className="text-slate-500 text-sm mt-2">Selecione como deseja a tela para {selectingAroFor.modelo_base}</p>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4">
