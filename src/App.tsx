@@ -1,17 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, ShoppingCart, Trash2, Phone, ShieldCheck, Smartphone, Info, X, Check, ArrowRight, Menu, ClipboardList, Battery, Layers, Filter, Wrench, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-interface Produto {
-  id: number;
-  nome_completo: string;
-  modelo_base: string;
-  marca: string;
-  categoria: 'TELA' | 'BATERIA' | 'DOCK' | 'SERVICO' | 'TAMPA' | 'CARCACA';
-  tipo_tela: string | null;
-  exige_remocao_tela?: number;
-  dificuldade?: string;
-}
+import { PRODUTOS_ESTATICOS, type Produto } from './data/produtos';
 
 interface Combo {
   id: string;
@@ -72,12 +62,25 @@ export default function App() {
   // Aro selection state
   const [selectingAroFor, setSelectingAroFor] = useState<Produto | null>(null);
 
-  // Fetch products on search or brand change
+  // Filter products locally for static hosting compatibility
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      fetch(`/api/produtos?q=${search}&marca=${selectedMarca}`)
-        .then(res => res.json())
-        .then(data => setProdutos(data));
+      const filtered = PRODUTOS_ESTATICOS.filter(p => {
+        const matchesMarca = selectedMarca === 'Todas' || p.marca === selectedMarca;
+        const matchesSearch = search.length < 2 || 
+          p.nome_completo.toLowerCase().includes(search.toLowerCase()) || 
+          p.modelo_base.toLowerCase().includes(search.toLowerCase());
+        
+        return matchesMarca && matchesSearch;
+      });
+
+      // Sort and limit like the API did
+      const sorted = filtered.sort((a, b) => {
+        if (a.categoria !== b.categoria) return b.categoria.localeCompare(a.categoria);
+        return a.modelo_base.localeCompare(b.modelo_base);
+      }).slice(0, 100);
+
+      setProdutos(sorted);
     }, 300);
 
     return () => clearTimeout(delayDebounceFn);
