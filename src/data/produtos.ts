@@ -40,6 +40,26 @@ const modelosData: { marca: string, nome: string, oled: boolean, glass: boolean 
   modelosData.push({ marca: "Motorola", nome: m, oled: m.includes("Edge") || m.includes("G52") || m.includes("G84"), glass: m.includes("Edge") });
 });
 
+// LG
+["K10", "K11", "K12", "K22", "K40", "K41S", "K50S", "K51S", "K52", "K61", "K62"].forEach(m => {
+  modelosData.push({ marca: "LG", nome: m, oled: false, glass: false });
+});
+
+// Xiaomi
+["Mi 9", "Mi 10", "Mi 11", "Mi 12", "Mi 13", "Poco X3", "Poco X4", "Poco X5", "Poco F3", "Poco F4"].forEach(m => {
+  modelosData.push({ marca: "Xiaomi", nome: m, oled: true, glass: true });
+});
+
+// Redmi
+["Redmi 9", "Redmi 10", "Redmi 12", "Redmi Note 8", "Redmi Note 9", "Redmi Note 10", "Redmi Note 11", "Redmi Note 12", "Redmi Note 13"].forEach(m => {
+  modelosData.push({ marca: "Redmi", nome: m, oled: m.includes("Note 10") || m.includes("Note 11") || m.includes("Note 12") || m.includes("Note 13"), glass: false });
+});
+
+// Realme
+["Realme 7", "Realme 8", "Realme 9", "Realme 10", "Realme C11", "Realme C35", "Realme C55"].forEach(m => {
+  modelosData.push({ marca: "Realme", nome: m, oled: m.includes("Realme 7") || m.includes("Realme 8") || m.includes("Realme 9"), glass: false });
+});
+
 const generatedProdutos: Produto[] = [];
 let currentId = 1;
 let currentModeloId = 1;
@@ -48,61 +68,79 @@ modelosData.forEach(m => {
   const modeloId = currentModeloId++;
   
   // 📱 Telas
-  if (m.oled) {
+  if (m.marca === 'Apple') {
+    // iPhone screens don't have aro variations in this context
     generatedProdutos.push({
       id: currentId++,
       modelo_id: modeloId,
-      nome_completo: `Tela ${m.nome} OLED Com Aro`,
+      nome_completo: `Tela ${m.nome} ${m.oled ? 'OLED' : 'INCELL'}`,
       categoria: 'TELA',
-      tecnologia: 'OLED',
-      possui_aro: 1,
-      nivel_dificuldade: 'Médio',
-      exige_remocao_tela: 0,
-      marca: m.marca,
-      modelo_base: m.nome,
-      estoque: 5
-    });
-    generatedProdutos.push({
-      id: currentId++,
-      modelo_id: modeloId,
-      nome_completo: `Tela ${m.nome} OLED Sem Aro`,
-      categoria: 'TELA',
-      tecnologia: 'OLED',
+      tecnologia: m.oled ? 'OLED' : 'INCELL',
       possui_aro: 0,
       nivel_dificuldade: 'Médio',
       exige_remocao_tela: 0,
       marca: m.marca,
       modelo_base: m.nome,
-      estoque: 8
+      estoque: 10
+    });
+  } else {
+    // Other brands have aro variations
+    if (m.oled) {
+      generatedProdutos.push({
+        id: currentId++,
+        modelo_id: modeloId,
+        nome_completo: `Tela ${m.nome} OLED Com Aro`,
+        categoria: 'TELA',
+        tecnologia: 'OLED',
+        possui_aro: 1,
+        nivel_dificuldade: 'Médio',
+        exige_remocao_tela: 0,
+        marca: m.marca,
+        modelo_base: m.nome,
+        estoque: 5
+      });
+      generatedProdutos.push({
+        id: currentId++,
+        modelo_id: modeloId,
+        nome_completo: `Tela ${m.nome} OLED Sem Aro`,
+        categoria: 'TELA',
+        tecnologia: 'OLED',
+        possui_aro: 0,
+        nivel_dificuldade: 'Médio',
+        exige_remocao_tela: 0,
+        marca: m.marca,
+        modelo_base: m.nome,
+        estoque: 8
+      });
+    }
+    
+    generatedProdutos.push({
+      id: currentId++,
+      modelo_id: modeloId,
+      nome_completo: `Tela ${m.nome} INCELL Com Aro`,
+      categoria: 'TELA',
+      tecnologia: 'INCELL',
+      possui_aro: 1,
+      nivel_dificuldade: 'Médio',
+      exige_remocao_tela: 0,
+      marca: m.marca,
+      modelo_base: m.nome,
+      estoque: 10
+    });
+    generatedProdutos.push({
+      id: currentId++,
+      modelo_id: modeloId,
+      nome_completo: `Tela ${m.nome} INCELL Sem Aro`,
+      categoria: 'TELA',
+      tecnologia: 'INCELL',
+      possui_aro: 0,
+      nivel_dificuldade: 'Médio',
+      exige_remocao_tela: 0,
+      marca: m.marca,
+      modelo_base: m.nome,
+      estoque: 15
     });
   }
-  
-  generatedProdutos.push({
-    id: currentId++,
-    modelo_id: modeloId,
-    nome_completo: `Tela ${m.nome} INCELL Com Aro`,
-    categoria: 'TELA',
-    tecnologia: 'INCELL',
-    possui_aro: 1,
-    nivel_dificuldade: 'Médio',
-    exige_remocao_tela: 0,
-    marca: m.marca,
-    modelo_base: m.nome,
-    estoque: 10
-  });
-  generatedProdutos.push({
-    id: currentId++,
-    modelo_id: modeloId,
-    nome_completo: `Tela ${m.nome} INCELL Sem Aro`,
-    categoria: 'TELA',
-    tecnologia: 'INCELL',
-    possui_aro: 0,
-    nivel_dificuldade: 'Médio',
-    exige_remocao_tela: 0,
-    marca: m.marca,
-    modelo_base: m.nome,
-    estoque: 15
-  });
 
   // 🔋 Baterias
   generatedProdutos.push({

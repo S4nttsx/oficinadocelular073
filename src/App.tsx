@@ -38,6 +38,7 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [selectedMarca, setSelectedMarca] = useState('Todas');
   const [selectedCategoria, setSelectedCategoria] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'produtos' | 'guia'>('produtos');
   
   // Client-side filtering logic
   const produtos = useMemo(() => {
@@ -57,6 +58,7 @@ export default function App() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [selectedStore, setSelectedStore] = useState<'camamu' | 'barra_grande'>('camamu');
   const [customer, setCustomer] = useState<CustomerData>({
     nome: '',
     cpf: '',
@@ -67,9 +69,6 @@ export default function App() {
   });
   const [showInfoModal, setShowInfoModal] = useState(false);
   
-  // Aro selection state
-  const [selectingAroFor, setSelectingAroFor] = useState<Produto | null>(null);
-
   const addToCart = (produto: Produto, aro?: 'Com aro' | 'Sem aro') => {
     setCart(prev => {
       const existingIndex = prev.findIndex(item => 
@@ -84,7 +83,6 @@ export default function App() {
       
       return [...prev, { ...produto, quantity: 1, aro }];
     });
-    setSelectingAroFor(null);
   };
 
   const removeFromCart = (id: number, aro?: string) => {
@@ -121,7 +119,13 @@ Telefone: ${customer.telefone}
 Aguardo retorno.`;
 
     const encodedMessage = encodeURIComponent(message);
-    window.open(`https://wa.me/5573991162549?text=${encodedMessage}`, '_blank');
+    const baseUrl = selectedStore === 'camamu' 
+      ? 'https://wa.me/5573991162549' 
+      : 'https://wa.me/message/E3XSXARPSLK4G1';
+    
+    // For wa.me/message links, we use &text if there's already a query, but usually they are clean
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    window.open(`${baseUrl}${separator}text=${encodedMessage}`, '_blank');
   };
 
   return (
@@ -133,10 +137,7 @@ Aguardo retorno.`;
             <div className="bg-blue-600 p-2 rounded-xl">
               <Smartphone className="w-8 h-8 text-white" />
             </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">Oficina do Celular</h1>
-              <span className="text-blue-400 text-[10px] font-bold tracking-[0.3em] uppercase">Distribuidora de Peças</span>
-            </div>
+            <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">Oficina do Celular</h1>
           </div>
           
           <div className="flex items-center gap-4">
@@ -176,7 +177,7 @@ Aguardo retorno.`;
             </h2>
             <p className="text-blue-200/80 text-lg md:text-xl max-w-2xl mx-auto font-medium">
               Encontre peças para Apple, Samsung, Motorola e LG. <br className="hidden md:block" />
-              Qualidade de distribuidora com entrega rápida.
+              Qualidade e confiança com entrega rápida.
             </p>
           </motion.div>
           
@@ -270,8 +271,34 @@ Aguardo retorno.`;
 
           {/* Results Area */}
           <div className="lg:col-span-3 space-y-8">
-            {/* Binds Section */}
-            <div className="space-y-4">
+            {/* Tabs */}
+            <div className="flex gap-4 border-b border-slate-100 pb-4">
+              <button 
+                onClick={() => setActiveTab('produtos')}
+                className={`px-6 py-3 rounded-2xl text-sm font-black transition-all ${
+                  activeTab === 'produtos' 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                  : 'text-slate-400 hover:bg-slate-50'
+                }`}
+              >
+                Produtos
+              </button>
+              <button 
+                onClick={() => setActiveTab('guia')}
+                className={`px-6 py-3 rounded-2xl text-sm font-black transition-all ${
+                  activeTab === 'guia' 
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' 
+                  : 'text-slate-400 hover:bg-slate-50'
+                }`}
+              >
+                Guia Técnico
+              </button>
+            </div>
+
+            {activeTab === 'produtos' ? (
+              <>
+                {/* Binds Section */}
+                <div className="space-y-4">
               <div className="flex items-center justify-between px-2">
                 <div className="flex items-center gap-3">
                   <Layers className="w-5 h-5 text-blue-500" />
@@ -369,13 +396,7 @@ Aguardo retorno.`;
 
                     <div className="flex-1">
                       <h4 className="font-black text-lg text-blue-950 mb-1 leading-tight">{p.nome_completo}</h4>
-                      <p className="text-slate-400 text-xs font-bold uppercase tracking-tighter mb-2">{p.modelo_base}</p>
-                      
-                      {p.estoque !== null && (
-                        <p className={`text-[10px] font-black uppercase mb-4 ${p.estoque > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          Estoque: {p.estoque > 0 ? `${p.estoque} unidades` : 'Esgotado'}
-                        </p>
-                      )}
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-tighter mb-4">{p.modelo_base}</p>
 
                       {p.exige_remocao_tela === 1 && (
                         <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
@@ -401,7 +422,7 @@ Aguardo retorno.`;
                         <p className="text-sm font-black text-blue-900 italic">Sob Consulta</p>
                       </div>
                       <button 
-                        onClick={() => p.categoria === 'TELA' ? setSelectingAroFor(p) : addToCart(p)}
+                        onClick={() => addToCart(p)}
                         className="bg-blue-950 text-white p-4 rounded-2xl hover:bg-blue-600 transition-all active:scale-90 shadow-lg shadow-blue-950/10"
                       >
                         <ShoppingCart className="w-5 h-5" />
@@ -420,75 +441,69 @@ Aguardo retorno.`;
                 <p className="text-slate-400 font-bold">Nenhum item encontrado para sua busca.</p>
               </div>
             )}
+              </>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-[2.5rem] p-10 md:p-14 shadow-xl border border-slate-100"
+              >
+                <div className="space-y-12">
+                  <div>
+                    <h3 className="text-2xl font-black text-blue-950 mb-6 flex items-center gap-3">
+                      <Smartphone className="w-6 h-6 text-blue-600" /> Tecnologias de Display
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="p-8 bg-purple-50 rounded-3xl border border-purple-100">
+                        <div className="flex items-center gap-3 text-purple-600 font-black uppercase tracking-widest text-xs mb-4">
+                          <div className="w-3 h-3 rounded-full bg-purple-600 shadow-lg shadow-purple-600/20" /> Tela OLED
+                        </div>
+                        <p className="text-slate-700 text-sm leading-relaxed font-medium">
+                          A tecnologia OLED (Organic Light-Emitting Diode) oferece a melhor qualidade de imagem. Cada pixel emite sua própria luz, resultando em pretos perfeitos, cores vibrantes e menor consumo de energia. É a tela padrão para modelos Premium.
+                        </p>
+                      </div>
+                      <div className="p-8 bg-blue-50 rounded-3xl border border-blue-100">
+                        <div className="flex items-center gap-3 text-blue-600 font-black uppercase tracking-widest text-xs mb-4">
+                          <div className="w-3 h-3 rounded-full bg-blue-600 shadow-lg shadow-blue-600/20" /> Tela INCELL
+                        </div>
+                        <p className="text-slate-700 text-sm leading-relaxed font-medium">
+                          As telas INCELL integram os sensores de toque diretamente no painel LCD. Isso as torna mais finas e leves que as telas LCD tradicionais, oferecendo uma excelente resposta ao toque e cores fiéis com um custo muito mais acessível.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="h-px bg-slate-100" />
+
+                  <div>
+                    <h3 className="text-2xl font-black text-blue-950 mb-6 flex items-center gap-3">
+                      <Layers className="w-6 h-6 text-blue-600" /> Tipos de Montagem
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="p-8 bg-emerald-50 rounded-3xl border border-emerald-100">
+                        <div className="flex items-center gap-3 text-emerald-600 font-black uppercase tracking-widest text-xs mb-4">
+                          <div className="w-3 h-3 rounded-full bg-emerald-600 shadow-lg shadow-emerald-600/20" /> Com Aro (Frame)
+                        </div>
+                        <p className="text-slate-700 text-sm leading-relaxed font-medium">
+                          A tela já vem montada na moldura lateral do aparelho. A instalação é muito mais rápida, segura e o acabamento fica idêntico ao original de fábrica, pois não requer colagem manual da tela no chassi.
+                        </p>
+                      </div>
+                      <div className="p-8 bg-amber-50 rounded-3xl border border-amber-100">
+                        <div className="flex items-center gap-3 text-amber-600 font-black uppercase tracking-widest text-xs mb-4">
+                          <div className="w-3 h-3 rounded-full bg-amber-600 shadow-lg shadow-amber-600/20" /> Sem Aro
+                        </div>
+                        <p className="text-slate-700 text-sm leading-relaxed font-medium">
+                          É apenas o painel frontal (vidro + display). Requer que o técnico remova a tela antiga da moldura original e cole a nova. É uma opção mais econômica, porém exige mais tempo e cuidado na mão de obra.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
           </div>
         </div>
       </main>
-
-      {/* Aro Selection Modal */}
-      <AnimatePresence>
-        {selectingAroFor && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectingAroFor(null)}
-              className="absolute inset-0 bg-blue-950/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden p-8"
-            >
-              <div className="text-center space-y-6">
-                <div className="bg-blue-50 w-16 h-16 rounded-3xl flex items-center justify-center mx-auto">
-                  <Layers className="w-8 h-8 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-black text-blue-950">Opções de Montagem</h3>
-                  <p className="text-slate-500 text-sm mt-2">Selecione como deseja a tela para {selectingAroFor.modelo_base}</p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4">
-                  <button 
-                    onClick={() => addToCart(selectingAroFor, 'Com aro')}
-                    className="group relative p-6 rounded-3xl border-2 border-slate-100 hover:border-blue-600 hover:bg-blue-50 transition-all text-left"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-black text-blue-950">Com Aro</span>
-                      <div className="w-6 h-6 rounded-full border-2 border-slate-200 group-hover:border-blue-600 group-hover:bg-blue-600 flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
-                      </div>
-                    </div>
-                    <p className="text-xs text-slate-500">Instalação mais rápida e segura. Moldura inclusa.</p>
-                  </button>
-
-                  <button 
-                    onClick={() => addToCart(selectingAroFor, 'Sem aro')}
-                    className="group relative p-6 rounded-3xl border-2 border-slate-100 hover:border-blue-600 hover:bg-blue-50 transition-all text-left"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-black text-blue-950">Sem Aro</span>
-                      <div className="w-6 h-6 rounded-full border-2 border-slate-200 group-hover:border-blue-600 group-hover:bg-blue-600 flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
-                      </div>
-                    </div>
-                    <p className="text-xs text-slate-500">Apenas o display. Requer colagem na moldura original.</p>
-                  </button>
-                </div>
-
-                <button 
-                  onClick={() => setSelectingAroFor(null)}
-                  className="text-slate-400 text-sm font-bold hover:text-slate-600"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* Cart Drawer */}
       <AnimatePresence>
@@ -607,6 +622,32 @@ Aguardo retorno.`;
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Selecione a Loja para Orçamento</label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button 
+                        onClick={() => setSelectedStore('camamu')}
+                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
+                          selectedStore === 'camamu' 
+                          ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md' 
+                          : 'border-slate-100 text-slate-500 hover:border-blue-200'
+                        }`}
+                      >
+                        <span className="font-black uppercase tracking-tighter">Camamu</span>
+                      </button>
+                      <button 
+                        onClick={() => setSelectedStore('barra_grande')}
+                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
+                          selectedStore === 'barra_grande' 
+                          ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md' 
+                          : 'border-slate-100 text-slate-500 hover:border-blue-200'
+                        }`}
+                      >
+                        <span className="font-black uppercase tracking-tighter">Barra Grande</span>
+                      </button>
+                    </div>
+                  </div>
+
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Modelo do seu Celular (Obrigatório)</label>
                     <input 
@@ -771,7 +812,7 @@ Aguardo retorno.`;
             </div>
             <span className="font-black text-blue-950 uppercase tracking-tighter text-xl">Oficina do Celular</span>
           </div>
-          <p className="text-slate-400 text-sm font-medium">© 2024 Oficina do Celular. Distribuidora Autorizada de Peças.</p>
+          <p className="text-slate-400 text-sm font-medium">© 2024 Oficina do Celular. Todos os direitos reservados.</p>
           <div className="flex gap-8">
             <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors font-bold text-sm">Instagram</a>
             <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors font-bold text-sm">Facebook</a>
