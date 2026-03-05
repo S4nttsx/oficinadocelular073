@@ -663,23 +663,29 @@ Aguardo retorno.`;
                     <div className="grid grid-cols-2 gap-4">
                       <button 
                         onClick={() => setSelectedStore('camamu')}
-                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
+                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-center gap-2 ${
                           selectedStore === 'camamu' 
                           ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md' 
                           : 'border-slate-100 text-slate-500 hover:border-blue-200'
                         }`}
                       >
                         <span className="font-black uppercase tracking-tighter">Camamu</span>
+                        <span className="text-[8px] font-bold leading-tight opacity-70">
+                          RUA DJALMA DUTRA, CENTRO<br/>CEP 45445-000
+                        </span>
                       </button>
                       <button 
                         onClick={() => setSelectedStore('barra_grande')}
-                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center gap-2 ${
+                        className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center justify-center text-center gap-2 ${
                           selectedStore === 'barra_grande' 
                           ? 'border-blue-600 bg-blue-50 text-blue-600 shadow-md' 
                           : 'border-slate-100 text-slate-500 hover:border-blue-200'
                         }`}
                       >
                         <span className="font-black uppercase tracking-tighter">Barra Grande</span>
+                        <span className="text-[8px] font-bold leading-tight opacity-70">
+                          RUA MARAU<br/>CEP 45520-000
+                        </span>
                       </button>
                     </div>
                   </div>
@@ -841,17 +847,60 @@ Aguardo retorno.`;
 
       {/* Footer */}
       <footer className="bg-slate-50 border-t border-slate-200 py-20 px-4">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-950 p-2 rounded-xl">
-              <Smartphone className="w-6 h-6 text-white" />
+        <div className="max-w-7xl mx-auto space-y-16">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
+            <div className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-950 p-2 rounded-xl">
+                  <Smartphone className="w-6 h-6 text-white" />
+                </div>
+                <span className="font-black text-blue-950 uppercase tracking-tighter text-xl">Oficina do Celular</span>
+              </div>
+              <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                Especialistas em reparos de dispositivos móveis com as melhores peças do mercado.
+              </p>
             </div>
-            <span className="font-black text-blue-950 uppercase tracking-tighter text-xl">Oficina do Celular</span>
+
+            <div className="space-y-6">
+              <h4 className="font-black text-blue-950 uppercase tracking-widest text-xs">Nossas Lojas</h4>
+              <div className="space-y-4">
+                <div>
+                  <p className="font-black text-blue-600 text-xs uppercase mb-1">Unidade Camamu</p>
+                  <p className="text-slate-500 text-[10px] font-bold leading-tight">
+                    RUA DJALMA DUTRA - CENTRO<br/>CEP 45445-000 - CAMAMU-BA
+                  </p>
+                </div>
+                <div>
+                  <p className="font-black text-blue-600 text-xs uppercase mb-1">Unidade Barra Grande</p>
+                  <p className="text-slate-500 text-[10px] font-bold leading-tight">
+                    RUA MARAU - CEP 45520-000<br/>MARAÚ - BA
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <h4 className="font-black text-blue-950 uppercase tracking-widest text-xs">Redes Sociais</h4>
+              <div className="flex gap-6">
+                <a 
+                  href="https://www.instagram.com/oficinadocelular073?igsh=MWhscmNlbGlpMGplbQ==" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-slate-400 hover:text-blue-600 transition-colors font-bold text-sm"
+                >
+                  Instagram
+                </a>
+              </div>
+            </div>
           </div>
-          <p className="text-slate-400 text-sm font-medium">© 2024 Oficina do Celular. Todos os direitos reservados.</p>
-          <div className="flex gap-8">
-            <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors font-bold text-sm">Instagram</a>
-            <a href="#" className="text-slate-400 hover:text-blue-600 transition-colors font-bold text-sm">Facebook</a>
+
+          <div className="pt-12 border-t border-slate-200 flex flex-col items-center gap-4">
+            <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest text-center">
+              © 2024 Oficina do Celular. Todos os direitos reservados.
+            </p>
+            <p className="text-slate-300 text-[9px] font-bold uppercase tracking-widest text-center">
+              Criador do projeto: Victor Santos Bomfim. Contato: 73981086087
+            </p>
           </div>
         </div>
       </footer>
