@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { Search, ShoppingCart, Trash2, Phone, ShieldCheck, Smartphone, Info, X, Check, ArrowRight, Menu, ClipboardList, Battery, Layers, Filter, Wrench, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PRODUTOS_ESTATICOS, Produto } from './data/produtos';
@@ -36,17 +36,19 @@ const MARCAS = ['Todas', 'Apple', 'Samsung', 'Motorola', 'LG', 'Xiaomi', 'Redmi'
 
 export default function App() {
   const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
   const [selectedMarca, setSelectedMarca] = useState('Todas');
   const [selectedBindId, setSelectedBindId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'produtos' | 'guia'>('produtos');
+  const [displayLimit, setDisplayLimit] = useState(24);
   
   // Client-side filtering logic
-  const produtos = useMemo(() => {
+  const filteredProdutos = useMemo(() => {
     try {
       if (!Array.isArray(PRODUTOS_ESTATICOS)) return [];
       
       const selectedBind = selectedBindId ? BINDS.find(b => b.id === selectedBindId) : null;
-      const searchTerm = (search || '').toLowerCase().trim();
+      const searchTerm = (deferredSearch || '').toLowerCase().trim();
       
       return PRODUTOS_ESTATICOS.filter(p => {
         if (!p) return false;
@@ -71,7 +73,16 @@ export default function App() {
       console.error("Erro ao filtrar produtos:", error);
       return [];
     }
-  }, [search, selectedMarca, selectedBindId]);
+  }, [deferredSearch, selectedMarca, selectedBindId]);
+
+  // Reset display limit when filters change
+  useEffect(() => {
+    setDisplayLimit(24);
+  }, [deferredSearch, selectedMarca, selectedBindId]);
+
+  const produtos = useMemo(() => {
+    return filteredProdutos.slice(0, displayLimit);
+  }, [filteredProdutos, displayLimit]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -365,20 +376,18 @@ Aguardo retorno.`;
                 </h3>
               </div>
               <span className="bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full text-xs font-bold">
-                {produtos.length} itens encontrados
+                {filteredProdutos.length} itens encontrados
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <AnimatePresence>
-                {produtos.map((p) => (
-                  <motion.div 
-                    key={p.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col group"
-                  >
+              {produtos.map((p) => (
+                <motion.div 
+                  key={p.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col group"
+                >
                     <div className="flex justify-between items-start mb-4">
                       <div className={`p-3 rounded-2xl ${
                         p.categoria === 'TELA' ? 'bg-blue-50 text-blue-600' : 
@@ -447,10 +456,20 @@ Aguardo retorno.`;
                     </div>
                   </motion.div>
                 ))}
-              </AnimatePresence>
             </div>
 
-            {produtos.length === 0 && (
+            {filteredProdutos.length > displayLimit && (
+              <div className="flex justify-center pt-8">
+                <button 
+                  onClick={() => setDisplayLimit(prev => prev + 24)}
+                  className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-2"
+                >
+                  Carregar mais produtos <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+
+            {filteredProdutos.length === 0 && (
               <div className="py-24 text-center space-y-4">
                 <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
                   <Search className="w-8 h-8 text-slate-200" />
