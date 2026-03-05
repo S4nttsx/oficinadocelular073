@@ -143,15 +143,15 @@ Aguardo retorno.`;
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setIsCartOpen(true)}
-              className="relative p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all flex items-center gap-3 border border-white/10"
+              className="relative p-2 md:p-3 bg-white/10 hover:bg-white/20 rounded-2xl transition-all flex items-center gap-2 md:gap-3 border border-white/20"
             >
-              <ClipboardList className="w-6 h-6 text-blue-400" />
-              <div className="hidden md:block text-left">
-                <p className="text-[10px] uppercase font-bold text-blue-400 leading-none mb-1">Meu Pedido</p>
-                <p className="text-sm font-bold leading-none">Solicitar Orçamento</p>
+              <ClipboardList className="w-5 h-5 md:w-6 h-6 text-blue-400" />
+              <div className="text-left">
+                <p className="text-[8px] md:text-[10px] uppercase font-bold text-blue-400 leading-none mb-1">Meu Pedido</p>
+                <p className="text-[10px] md:text-sm font-bold leading-none">Orçamento</p>
               </div>
               {cart.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-[10px] font-black w-6 h-6 flex items-center justify-center rounded-full border-2 border-blue-950 shadow-lg">
+                <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-[10px] font-black w-5 h-5 md:w-6 md:h-6 flex items-center justify-center rounded-full border-2 border-blue-950 shadow-lg">
                   {cart.length}
                 </span>
               )}
@@ -608,9 +608,9 @@ Aguardo retorno.`;
               initial={{ scale: 0.9, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
-              className="relative w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden"
+              className="relative w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
             >
-              <div className="p-10 md:p-14">
+              <div className="p-6 md:p-14">
                 <div className="flex justify-between items-start mb-10">
                   <div>
                     <h3 className="text-4xl font-black text-blue-950 tracking-tight">Seus Dados</h3>
@@ -741,7 +741,7 @@ Aguardo retorno.`;
               exit={{ scale: 0.9, opacity: 0 }}
               className="relative w-full max-w-3xl bg-white rounded-[3rem] shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
             >
-              <div className="p-10 md:p-14">
+              <div className="p-6 md:p-14">
                 <div className="flex justify-between items-center mb-12">
                   <h3 className="text-3xl font-black text-blue-950 tracking-tight">Tipos de Telas</h3>
                   <button onClick={() => setShowInfoModal(false)} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors">
