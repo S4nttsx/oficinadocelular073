@@ -37,11 +37,13 @@ const MARCAS = ['Todas', 'Apple', 'Samsung', 'Motorola', 'LG', 'Xiaomi', 'Redmi'
 export default function App() {
   const [search, setSearch] = useState('');
   const [selectedMarca, setSelectedMarca] = useState('Todas');
-  const [selectedCategoria, setSelectedCategoria] = useState<string | null>(null);
+  const [selectedBindId, setSelectedBindId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'produtos' | 'guia'>('produtos');
   
   // Client-side filtering logic
   const produtos = useMemo(() => {
+    const selectedBind = BINDS.find(b => b.id === selectedBindId);
+    
     return PRODUTOS_ESTATICOS.filter(p => {
       const matchesSearch = !search || 
         p.nome_completo.toLowerCase().includes(search.toLowerCase()) ||
@@ -49,11 +51,11 @@ export default function App() {
         p.marca.toLowerCase().includes(search.toLowerCase());
       
       const matchesMarca = selectedMarca === 'Todas' || p.marca === selectedMarca;
-      const matchesCategoria = !selectedCategoria || p.categoria === selectedCategoria;
+      const matchesCategoria = !selectedBind || selectedBind.categorias.includes(p.categoria);
       
       return matchesSearch && matchesMarca && matchesCategoria;
     });
-  }, [search, selectedMarca, selectedCategoria]);
+  }, [search, selectedMarca, selectedBindId]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -304,9 +306,9 @@ Aguardo retorno.`;
                   <Layers className="w-5 h-5 text-blue-500" />
                   <h3 className="text-2xl font-black text-blue-950">Filtros Rápidos</h3>
                 </div>
-                {selectedCategoria && (
+                {selectedBindId && (
                   <button 
-                    onClick={() => setSelectedCategoria(null)}
+                    onClick={() => setSelectedBindId(null)}
                     className="text-xs font-black text-red-500 uppercase tracking-widest hover:underline"
                   >
                     Limpar Filtro
@@ -317,9 +319,9 @@ Aguardo retorno.`;
                 {BINDS.map((bind) => (
                   <button
                     key={bind.id}
-                    onClick={() => setSelectedCategoria(bind.categorias[0])}
+                    onClick={() => setSelectedBindId(bind.id)}
                     className={`p-6 rounded-[2rem] text-left transition-all group relative overflow-hidden ${
-                      selectedCategoria === bind.categorias[0] 
+                      selectedBindId === bind.id 
                         ? 'bg-blue-600 text-white shadow-xl scale-[1.02]' 
                         : 'bg-blue-900 text-white hover:shadow-2xl hover:-translate-y-1'
                     }`}
@@ -330,9 +332,9 @@ Aguardo retorno.`;
                     <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Categoria</p>
                     <h4 className="text-sm font-black leading-tight mb-2">{bind.nome}</h4>
                     <div className={`flex items-center gap-2 text-[10px] font-bold w-fit px-3 py-1 rounded-full ${
-                      selectedCategoria === bind.categorias[0] ? 'bg-white/20' : 'bg-white/10'
+                      selectedBindId === bind.id ? 'bg-white/20' : 'bg-white/10'
                     }`}>
-                      {selectedCategoria === bind.categorias[0] ? 'Selecionado' : 'Visualizar'} <ArrowRight className="w-3 h-3" />
+                      {selectedBindId === bind.id ? 'Selecionado' : 'Visualizar'} <ArrowRight className="w-3 h-3" />
                     </div>
                   </button>
                 ))}
