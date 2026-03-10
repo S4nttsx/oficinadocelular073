@@ -16,12 +16,25 @@ const marcasData = ["Apple", "Samsung", "Motorola", "LG", "Xiaomi", "Redmi", "Re
 const modelosData: { marca: string, nome: string, oled: boolean, glass: boolean }[] = [];
 
 // Apple
-["iPhone 6", "iPhone 7", "iPhone 8", "iPhone X", "iPhone XR", "iPhone XS", "iPhone 11", "iPhone 12", "iPhone 13", "iPhone 14", "iPhone 15"].forEach(m => {
+[
+  "iPhone 6", "iPhone 6 Plus", "iPhone 6s", "iPhone 6s Plus",
+  "iPhone 7", "iPhone 7 Plus",
+  "iPhone 8", "iPhone 8 Plus",
+  "iPhone X", "iPhone XR", "iPhone XS", "iPhone XS Max",
+  "iPhone 11", "iPhone 11 Pro", "iPhone 11 Pro Max",
+  "iPhone 12", "iPhone 12 Mini", "iPhone 12 Pro", "iPhone 12 Pro Max",
+  "iPhone 13", "iPhone 13 Mini", "iPhone 13 Pro", "iPhone 13 Pro Max",
+  "iPhone 14", "iPhone 14 Plus", "iPhone 14 Pro", "iPhone 14 Pro Max",
+  "iPhone 15", "iPhone 15 Plus", "iPhone 15 Pro", "iPhone 15 Pro Max"
+].forEach(m => {
+  const versionPart = m.split(" ")[1];
+  const version = parseInt(versionPart);
+  
   modelosData.push({ 
     marca: "Apple", 
     nome: m, 
-    oled: m.includes("X") || (m.includes("iPhone") && parseInt(m.split(" ")[1]) >= 12), 
-    glass: (m.includes("iPhone") && parseInt(m.split(" ")[1]) >= 8) || m.includes("X")
+    oled: m === "iPhone X" || m.includes("XS") || m.includes("Pro") || (!isNaN(version) && version >= 12), 
+    glass: (!isNaN(version) && version >= 8) || m.includes("X")
   });
 });
 
@@ -83,6 +96,27 @@ modelosData.forEach(m => {
       modelo_base: m.nome,
       estoque: 10
     });
+
+    // Adiciona opção INCELL para modelos OLED a partir do iPhone 11 Pro
+    const versionPart = m.nome.split(" ")[1];
+    const version = parseInt(versionPart);
+    const isPro = m.nome.includes("Pro");
+    
+    if (m.oled && ((version === 11 && isPro) || version >= 12)) {
+      generatedProdutos.push({
+        id: currentId++,
+        modelo_id: modeloId,
+        nome_completo: `Tela ${m.nome} INCELL (Econômica)`,
+        categoria: 'TELA',
+        tecnologia: 'INCELL',
+        possui_aro: 0,
+        nivel_dificuldade: 'Médio',
+        exige_remocao_tela: 0,
+        marca: m.marca,
+        modelo_base: m.nome,
+        estoque: 15
+      });
+    }
   } else {
     // Other brands have aro variations
     if (m.oled) {
