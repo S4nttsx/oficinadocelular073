@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
-import { Search, ShoppingCart, Trash2, Phone, ShieldCheck, Smartphone, Info, X, Check, ArrowRight, Menu, ClipboardList, Battery, Layers, Filter, Wrench, Clock } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Phone, ShieldCheck, Smartphone, Info, X, Check, ArrowRight, Menu, ClipboardList, Battery, Layers, Filter, Wrench, Clock, Share2, Instagram } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PRODUTOS_ESTATICOS, Produto } from './data/produtos';
 
@@ -97,6 +97,7 @@ export default function App() {
     modelo_aparelho: ''
   });
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   
   const addToCart = (produto: Produto, aro?: 'Com aro' | 'Sem aro') => {
     setCart(prev => {
@@ -159,6 +160,69 @@ Aguardo retorno.`;
 
   return (
     <div className="min-h-screen bg-white font-sans text-slate-900">
+      {/* Floating Share Button */}
+      <div className="fixed bottom-8 left-8 z-50 flex flex-col gap-3">
+        <AnimatePresence>
+          {isShareOpen && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 20 }}
+              className="flex flex-col gap-3 mb-2"
+            >
+              <button
+                onClick={() => {
+                  const url = window.location.href;
+                  const text = "Confira o catálogo da Oficina do Celular! Peças e orçamentos online:";
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text + " " + url)}`, '_blank');
+                }}
+                className="bg-emerald-500 text-white p-4 rounded-full shadow-xl hover:bg-emerald-600 transition-all flex items-center justify-center group relative"
+                title="Compartilhar no WhatsApp"
+              >
+                <Phone className="w-6 h-6" />
+                <span className="absolute left-full ml-4 px-3 py-1 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  WhatsApp
+                </span>
+              </button>
+              <a
+                href="https://www.instagram.com/oficinadocelular073?igsh=MWhscmNlbGlpMGplbQ=="
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 text-white p-4 rounded-full shadow-xl hover:opacity-90 transition-all flex items-center justify-center group relative"
+                title="Seguir no Instagram"
+              >
+                <Instagram className="w-6 h-6" />
+                <span className="absolute left-full ml-4 px-3 py-1 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  Instagram
+                </span>
+              </a>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Link copiado para a área de transferência!');
+                  setIsShareOpen(false);
+                }}
+                className="bg-slate-100 text-slate-600 p-4 rounded-full shadow-xl hover:bg-slate-200 transition-all flex items-center justify-center group relative border border-slate-200"
+                title="Copiar Link"
+              >
+                <ClipboardList className="w-6 h-6" />
+                <span className="absolute left-full ml-4 px-3 py-1 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                  Copiar Link
+                </span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <button
+          onClick={() => setIsShareOpen(!isShareOpen)}
+          className={`p-5 rounded-full shadow-2xl transition-all flex items-center justify-center ${
+            isShareOpen ? 'bg-red-500 text-white rotate-45' : 'bg-blue-600 text-white'
+          }`}
+        >
+          <Share2 className="w-7 h-7" />
+        </button>
+      </div>
+
       {/* Header */}
       <header className="sticky top-0 z-40 bg-blue-950 text-white shadow-xl">
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
@@ -200,9 +264,9 @@ Aguardo retorno.`;
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight">
-              O Maior Catálogo de <br />
-              <span className="text-blue-500">Telas e Baterias</span>
+            <h2 className="text-4xl md:text-6xl font-black tracking-tight uppercase">
+              Bem vindo a Oficina do Celular <br />
+              <span className="text-blue-500">Peça já seu orçamento</span>
             </h2>
             <p className="text-blue-200/80 text-lg md:text-xl max-w-2xl mx-auto font-medium">
               Encontre peças para Apple, Samsung, Motorola e LG. <br className="hidden md:block" />
@@ -294,6 +358,33 @@ Aguardo retorno.`;
                 >
                   <Info className="w-4 h-4" /> Tipos de Telas
                 </button>
+
+                <div className="mt-8 pt-8 border-t border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight mb-4 leading-tight">
+                    Caso não encontre a peça desejada entre em contato com o suporte
+                  </p>
+                  <div className="flex items-center gap-3 text-blue-950 font-black uppercase tracking-widest text-[10px] mb-4">
+                    <Phone className="w-3 h-3 text-blue-600" /> Falar com o Suporte
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <a 
+                      href="https://wa.me/5573991162549"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-3 p-3 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-all border border-emerald-100"
+                    >
+                      <Phone className="w-3 h-3" /> Suporte Camamu
+                    </a>
+                    <a 
+                      href="https://wa.me/message/E3XSXARPSLK4G1"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-3 p-3 bg-emerald-50 text-emerald-700 rounded-xl font-bold text-xs hover:bg-emerald-100 transition-all border border-emerald-100"
+                    >
+                      <Phone className="w-3 h-3" /> Suporte Barra Grande
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -880,15 +971,42 @@ Aguardo retorno.`;
             </div>
 
             <div className="space-y-6">
+              <h4 className="font-black text-blue-950 uppercase tracking-widest text-xs">Compartilhar Site</h4>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => {
+                    const url = window.location.href;
+                    const text = "Confira o catálogo da Oficina do Celular! Peças e orçamentos online:";
+                    window.open(`https://wa.me/?text=${encodeURIComponent(text + " " + url)}`, '_blank');
+                  }}
+                  className="bg-emerald-500 text-white p-3 rounded-xl shadow-lg hover:bg-emerald-600 transition-all flex items-center justify-center"
+                  title="Compartilhar no WhatsApp"
+                >
+                  <Phone className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                    alert('Link copiado!');
+                  }}
+                  className="bg-slate-200 text-slate-600 p-3 rounded-xl shadow-lg hover:bg-slate-300 transition-all flex items-center justify-center"
+                  title="Copiar Link"
+                >
+                  <ClipboardList className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-6">
               <h4 className="font-black text-blue-950 uppercase tracking-widest text-xs">Redes Sociais</h4>
               <div className="flex gap-6">
                 <a 
                   href="https://www.instagram.com/oficinadocelular073?igsh=MWhscmNlbGlpMGplbQ==" 
                   target="_blank" 
                   rel="noopener noreferrer" 
-                  className="text-slate-400 hover:text-blue-600 transition-colors font-bold text-sm"
+                  className="text-slate-400 hover:text-blue-600 transition-colors font-bold text-sm flex items-center gap-2"
                 >
-                  Instagram
+                  <Instagram className="w-4 h-4" /> Instagram
                 </a>
               </div>
             </div>
