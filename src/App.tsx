@@ -93,31 +93,47 @@ export default function App() {
 
     try {
       const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+      if (!apiKey) {
+        throw new Error("API Key não encontrada. Verifique as configurações de ambiente.");
+      }
+
       const ai = new GoogleGenAI({ apiKey });
       
-      // Formata o histórico para o formato esperado pela API (user/model)
-      const history = chatMessages
-        .filter(m => m.role === 'user' || m.role === 'model')
-        .map(m => ({
-          role: m.role,
-          parts: [{ text: m.text }]
-        }));
+      // O histórico deve começar com uma mensagem do 'user' e alternar entre 'user' e 'model'
+      // Não devemos incluir a mensagem atual (userMsg) no histórico, pois ela é enviada no sendMessage
+      const history = [];
+      const previousMessages = chatMessages.slice(0, -1); // Pega todas as mensagens exceto a última que acabamos de adicionar
+      
+      let firstUserIndex = -1;
+      for (let i = 0; i < previousMessages.length; i++) {
+        if (previousMessages[i].role === 'user') {
+          firstUserIndex = i;
+          break;
+        }
+      }
 
-      const response = await ai.models.generateContent({
+      if (firstUserIndex !== -1) {
+        for (let i = firstUserIndex; i < previousMessages.length; i++) {
+          history.push({
+            role: previousMessages[i].role,
+            parts: [{ text: previousMessages[i].text }]
+          });
+        }
+      }
+
+      const chat = ai.chats.create({
         model: "gemini-3-flash-preview",
-        contents: [
-          ...history,
-          { role: 'user', parts: [{ text: userMsg }] }
-        ],
         config: {
           systemInstruction: "Você é a Ofi, a assistente virtual inteligente da 'Oficina do Celular'. Sua missão é ajudar clientes com dúvidas sobre manutenção de celulares, peças (telas, baterias, conectores), orçamentos e cuidados com o aparelho. Seja educada, profissional e use termos técnicos de forma simples. Se não souber algo específico sobre um preço, peça para o cliente entrar em contato com o suporte humano nos botões da barra lateral. Nunca invente preços. Mantenha as respostas concisas e úteis.",
-        }
+        },
+        history: history,
       });
 
+      const response = await chat.sendMessage({ message: userMsg });
       const aiResponse = response.text || "Desculpe, tive um probleminha para processar sua resposta. Pode repetir?";
       setChatMessages(prev => [...prev, { role: 'model', text: aiResponse }]);
     } catch (error) {
-      console.error("Erro na IA:", error);
+      console.error("Erro detalhado na IA:", error);
       setChatMessages(prev => [...prev, { role: 'model', text: "Ops! Estou com instabilidade no momento. Tente novamente em instantes ou fale com nosso suporte humano." }]);
     } finally {
       setIsTyping(false);
