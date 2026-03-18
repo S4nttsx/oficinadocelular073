@@ -92,7 +92,8 @@ export default function App() {
     setIsTyping(true);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+      const ai = new GoogleGenAI({ apiKey });
       
       // Formata o histórico para o formato esperado pela API (user/model)
       const history = chatMessages
