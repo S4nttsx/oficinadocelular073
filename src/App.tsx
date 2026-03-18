@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
-import { Search, ShoppingCart, Trash2, Phone, ShieldCheck, Smartphone, Info, X, Check, ArrowRight, Menu, ClipboardList, Battery, Layers, Filter, Wrench, Clock, Share2, Instagram } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useDeferredValue, useRef } from 'react';
+import { Search, ShoppingCart, Trash2, Phone, ShieldCheck, Smartphone, Info, X, Check, ArrowRight, Menu, ClipboardList, Battery, Layers, Filter, Wrench, Clock, Share2, Instagram, MessageSquare, Send, Sparkles, Thermometer, Droplets, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { GoogleGenAI } from "@google/genai";
+import Markdown from 'react-markdown';
 import { PRODUTOS_ESTATICOS, Produto } from './data/produtos';
 
 interface Bind {
@@ -34,13 +36,96 @@ interface CustomerData {
 
 const MARCAS = ['Todas', 'Apple', 'Samsung', 'Motorola', 'LG', 'Xiaomi', 'Redmi', 'Realme'];
 
+const CARE_TIPS = [
+  {
+    title: "Evite Calor Excessivo",
+    description: "Não deixe seu celular no sol ou dentro do carro em dias quentes. O calor pode danificar a bateria permanentemente.",
+    icon: <Thermometer className="w-6 h-6 text-red-500" />
+  },
+  {
+    title: "Use Carregadores Originais",
+    description: "Carregadores de baixa qualidade podem causar curtos-circuitos e viciar a bateria do seu aparelho.",
+    icon: <Battery className="w-6 h-6 text-emerald-500" />
+  },
+  {
+    title: "Proteção de Tela",
+    description: "Sempre use película de vidro ou cerâmica. Uma queda simples pode custar caro se a tela não estiver protegida.",
+    icon: <Smartphone className="w-6 h-6 text-blue-500" />
+  },
+  {
+    title: "Limpeza Correta",
+    description: "Use apenas um pano de microfibra levemente úmido. Nunca borrife líquidos diretamente na tela ou entradas.",
+    icon: <Droplets className="w-6 h-6 text-cyan-500" />
+  }
+];
+
 export default function App() {
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const [selectedMarca, setSelectedMarca] = useState('Todas');
   const [selectedBindId, setSelectedBindId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'produtos' | 'guia'>('produtos');
+  const [activeTab, setActiveTab] = useState<'produtos' | 'guia' | 'suporte-ia'>('produtos');
   const [displayLimit, setDisplayLimit] = useState(24);
+
+  // AI Chat State
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'model', text: string }[]>([
+    { role: 'model', text: "Olá! Eu sou a **Ofi**, a assistente virtual da Oficina do Celular. Como posso te ajudar hoje com seu aparelho?" }
+  ]);
+  const [userInput, setUserInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatMessages]);
+
+  const handleSendMessage = async () => {
+    if (!userInput.trim() || isTyping) return;
+
+    const userMsg = userInput.trim();
+    setUserInput('');
+    setChatMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setIsTyping(true);
+
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      const model = ai.models.get({ model: "gemini-3-flash-preview" });
+      
+      const chat = ai.chats.create({
+        model: "gemini-3-flash-preview",
+        config: {
+          systemInstruction: "Você é a Ofi, a assistente virtual inteligente da 'Oficina do Celular'. Sua missão é ajudar clientes com dúvidas sobre manutenção de celulares, peças (telas, baterias, conectores), orçamentos e cuidados com o aparelho. Seja educada, profissional e use termos técnicos de forma simples. Se não souber algo específico sobre um preço, peça para o cliente entrar em contato com o suporte humano nos botões da barra lateral. Nunca invente preços. Mantenha as respostas concisas e úteis.",
+        },
+      });
+
+      // We need to pass the history to the chat
+      // The SDK expects history in a specific format if we use sendMessage
+      // But for simplicity and since we are in a turn-based environment, we can just use generateContent with context
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [
+          ...chatMessages.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+          { role: 'user', parts: [{ text: userMsg }] }
+        ],
+        config: {
+          systemInstruction: "Você é a Ofi, a assistente virtual inteligente da 'Oficina do Celular'. Sua missão é ajudar clientes com dúvidas sobre manutenção de celulares, peças (telas, baterias, conectores), orçamentos e cuidados com o aparelho. Seja educada, profissional e use termos técnicos de forma simples. Se não souber algo específico sobre um preço, peça para o cliente entrar em contato com o suporte humano nos botões da barra lateral. Nunca invente preços. Mantenha as respostas concisas e úteis.",
+        }
+      });
+
+      const aiResponse = response.text || "Desculpe, tive um probleminha para processar sua resposta. Pode repetir?";
+      setChatMessages(prev => [...prev, { role: 'model', text: aiResponse }]);
+    } catch (error) {
+      console.error("Erro na IA:", error);
+      setChatMessages(prev => [...prev, { role: 'model', text: "Ops! Estou com instabilidade no momento. Tente novamente em instantes ou fale com nosso suporte humano." }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
   
   // Client-side filtering logic
   const filteredProdutos = useMemo(() => {
@@ -413,169 +498,284 @@ Aguardo retorno.`;
               >
                 Guia Técnico
               </button>
+              <button 
+                onClick={() => setActiveTab('suporte-ia')}
+                className={`px-6 py-3 rounded-2xl text-sm font-black transition-all flex items-center gap-2 ${
+                  activeTab === 'suporte-ia' 
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
+                  : 'text-slate-400 hover:bg-slate-50'
+                }`}
+              >
+                <Sparkles className="w-4 h-4" /> Suporte IA
+              </button>
             </div>
 
-            {activeTab === 'produtos' ? (
-              <>
-                {/* Binds Section */}
-                <div className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                <div className="flex items-center gap-3">
-                  <Layers className="w-5 h-5 text-blue-500" />
-                  <h3 className="text-2xl font-black text-blue-950">Filtros Rápidos</h3>
-                </div>
-                {selectedBindId && (
-                  <button 
-                    onClick={() => setSelectedBindId(null)}
-                    className="text-xs font-black text-red-500 uppercase tracking-widest hover:underline"
-                  >
-                    Limpar Filtro
-                  </button>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                {BINDS.map((bind) => (
-                  <button
-                    key={bind.id}
-                    onClick={() => setSelectedBindId(bind.id)}
-                    className={`p-6 rounded-[2rem] text-left transition-all group relative overflow-hidden ${
-                      selectedBindId === bind.id 
-                        ? 'bg-blue-600 text-white shadow-xl scale-[1.02]' 
-                        : 'bg-blue-900 text-white hover:shadow-2xl hover:-translate-y-1'
-                    }`}
-                  >
-                    <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                      <Layers className="w-12 h-12" />
-                    </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Categoria</p>
-                    <h4 className="text-sm font-black leading-tight mb-2">{bind.nome}</h4>
-                    <div className={`flex items-center gap-2 text-[10px] font-bold w-fit px-3 py-1 rounded-full ${
-                      selectedBindId === bind.id ? 'bg-white/20' : 'bg-white/10'
-                    }`}>
-                      {selectedBindId === bind.id ? 'Selecionado' : 'Visualizar'} <ArrowRight className="w-3 h-3" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-3">
-                <Filter className="w-5 h-5 text-blue-600" />
-                <h3 className="text-2xl font-black text-blue-950">
-                  {selectedMarca !== 'Todas' ? `${selectedMarca}` : 'Catálogo Geral'}
-                </h3>
-              </div>
-              <span className="bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full text-xs font-bold">
-                {filteredProdutos.length} itens encontrados
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {produtos.map((p) => (
-                <motion.div 
-                  key={p.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col group"
-                >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className={`p-3 rounded-2xl ${
-                        p.categoria === 'TELA' ? 'bg-blue-50 text-blue-600' : 
-                        p.categoria === 'BATERIA' ? 'bg-amber-50 text-amber-600' : 
-                        p.categoria === 'CONECTOR' || p.categoria === 'DOCK' ? 'bg-emerald-50 text-emerald-600' :
-                        p.categoria === 'TAMPA' ? 'bg-rose-50 text-rose-600' :
-                        p.categoria === 'CARCACA' ? 'bg-slate-50 text-slate-600' :
-                        'bg-blue-50 text-blue-900'
-                      }`}>
-                        {p.categoria === 'TELA' ? <Layers className="w-6 h-6" /> : 
-                         p.categoria === 'BATERIA' ? <Battery className="w-6 h-6" /> : 
-                         p.categoria === 'CONECTOR' || p.categoria === 'DOCK' ? <Wrench className="w-6 h-6" /> :
-                         p.categoria === 'TAMPA' ? <ShieldCheck className="w-6 h-6" /> :
-                         p.categoria === 'CARCACA' ? <Smartphone className="w-6 h-6" /> :
-                         <Wrench className="w-6 h-6" />}
+            {activeTab === 'suporte-ia' && (
+              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                {/* AI Chat Section */}
+                <div className="bg-blue-950 rounded-[3rem] overflow-hidden shadow-2xl flex flex-col h-[600px]">
+                  <div className="p-6 bg-blue-900 flex items-center justify-between border-b border-white/10">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-indigo-500 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <Sparkles className="w-6 h-6 text-white" />
                       </div>
-                      <div className="flex flex-col items-end">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 group-hover:text-blue-400 transition-colors">
-                          {p.marca}
-                        </span>
-                        {p.nivel_dificuldade && (
-                          <span className={`text-[8px] font-black uppercase mt-1 px-2 py-0.5 rounded-full ${
-                            p.nivel_dificuldade === 'Alto' ? 'bg-red-100 text-red-600' :
-                            p.nivel_dificuldade === 'Médio' ? 'bg-amber-100 text-amber-600' :
-                            'bg-emerald-100 text-emerald-600'
-                          }`}>
-                            Dificuldade: {p.nivel_dificuldade}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex-1">
-                      <h4 className="font-black text-lg text-blue-950 mb-1 leading-tight">{p.nome_completo}</h4>
-                      <p className="text-slate-400 text-xs font-bold uppercase tracking-tighter mb-4">{p.modelo_base}</p>
-
-                      {p.exige_remocao_tela === 1 && (
-                        <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
-                          <Info className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                          <p className="text-[10px] font-bold text-red-600 leading-tight">
-                            ⚠ Para este modelo é necessário remover a tela para realizar o serviço.
-                          </p>
+                      <div>
+                        <h3 className="text-white font-black text-lg">Ofi - Assistente Virtual</h3>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">Online Agora</span>
                         </div>
-                      )}
-                      
-                      {p.categoria === 'TELA' && p.tecnologia && (
-                        <div className="flex gap-2 mb-4">
-                          <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${p.tecnologia === 'OLED' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {p.tecnologia}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">
-                      <div className="text-left">
-                        <p className="text-[10px] font-black text-slate-300 uppercase leading-none mb-1">Orçamento</p>
-                        <p className="text-sm font-black text-blue-900 italic">Sob Consulta</p>
                       </div>
-                      <button 
-                        onClick={() => addToCart(p)}
-                        className="bg-blue-950 text-white p-4 rounded-2xl hover:bg-blue-600 transition-all active:scale-90 shadow-lg shadow-blue-950/10"
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-white/10">
+                    {chatMessages.map((msg, index) => (
+                      <div 
+                        key={index} 
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                       >
-                        <ShoppingCart className="w-5 h-5" />
+                        <div className={`max-w-[80%] p-5 rounded-3xl text-sm font-medium leading-relaxed ${
+                          msg.role === 'user' 
+                          ? 'bg-indigo-600 text-white rounded-tr-none' 
+                          : 'bg-white/10 text-blue-50 rounded-tl-none border border-white/5'
+                        }`}>
+                          <div className="markdown-body">
+                            <Markdown>{msg.text}</Markdown>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {isTyping && (
+                      <div className="flex justify-start">
+                        <div className="bg-white/10 text-blue-50 p-5 rounded-3xl rounded-tl-none border border-white/5 flex gap-2">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" />
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-75" />
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce delay-150" />
+                        </div>
+                      </div>
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+
+                  <div className="p-6 bg-blue-900/50 border-t border-white/10">
+                    <div className="relative flex gap-3">
+                      <input 
+                        type="text"
+                        value={userInput}
+                        onChange={(e) => setUserInput(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder="Tire sua dúvida com a Ofi..."
+                        className="flex-1 bg-white/10 border border-white/10 rounded-2xl px-6 py-4 text-white placeholder:text-white/30 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium"
+                      />
+                      <button 
+                        onClick={handleSendMessage}
+                        disabled={isTyping || !userInput.trim()}
+                        className="bg-indigo-600 text-white p-4 rounded-2xl hover:bg-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-600/20"
+                      >
+                        <Send className="w-5 h-5" />
                       </button>
                     </div>
-                  </motion.div>
-                ))}
-            </div>
-
-            {filteredProdutos.length > displayLimit && (
-              <div className="flex justify-center pt-8">
-                <button 
-                  onClick={() => setDisplayLimit(prev => prev + 24)}
-                  className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-2"
-                >
-                  Carregar mais produtos <ArrowRight className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-
-            {filteredProdutos.length === 0 && (
-              <div className="py-24 text-center space-y-4">
-                <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
-                  <Search className="w-8 h-8 text-slate-200" />
+                    <p className="text-center text-[10px] text-white/30 font-bold uppercase tracking-widest mt-4">
+                      A Ofi pode cometer erros. Verifique informações importantes com o suporte humano.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-slate-400 font-bold">Nenhum item encontrado para sua busca.</p>
               </div>
             )}
-              </>
-            ) : (
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-[2.5rem] p-10 md:p-14 shadow-xl border border-slate-100"
-              >
-                <div className="space-y-12">
+
+            {activeTab === 'produtos' && (
+              <div className="space-y-8 animate-in fade-in duration-500">
+                {/* Binds Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <div className="flex items-center gap-3">
+                      <Layers className="w-5 h-5 text-blue-500" />
+                      <h3 className="text-2xl font-black text-blue-950">Filtros Rápidos</h3>
+                    </div>
+                    {selectedBindId && (
+                      <button 
+                        onClick={() => setSelectedBindId(null)}
+                        className="text-xs font-black text-red-500 uppercase tracking-widest hover:underline"
+                      >
+                        Limpar Filtro
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                    {BINDS.map((bind) => (
+                      <button
+                        key={bind.id}
+                        onClick={() => setSelectedBindId(bind.id)}
+                        className={`p-6 rounded-[2rem] text-left transition-all group relative overflow-hidden ${
+                          selectedBindId === bind.id 
+                            ? 'bg-blue-600 text-white shadow-xl scale-[1.02]' 
+                            : 'bg-blue-900 text-white hover:shadow-2xl hover:-translate-y-1'
+                        }`}
+                      >
+                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                          <Layers className="w-12 h-12" />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest mb-1 opacity-80">Categoria</p>
+                        <h4 className="text-sm font-black leading-tight mb-2">{bind.nome}</h4>
+                        <div className={`flex items-center gap-2 text-[10px] font-bold w-fit px-3 py-1 rounded-full ${
+                          selectedBindId === bind.id ? 'bg-white/20' : 'bg-white/10'
+                        }`}>
+                          {selectedBindId === bind.id ? 'Selecionado' : 'Visualizar'} <ArrowRight className="w-3 h-3" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between px-2">
+                  <div className="flex items-center gap-3">
+                    <Filter className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-2xl font-black text-blue-950">
+                      {selectedMarca !== 'Todas' ? `${selectedMarca}` : 'Catálogo Geral'}
+                    </h3>
+                  </div>
+                  <span className="bg-slate-100 text-slate-500 px-4 py-1.5 rounded-full text-xs font-bold">
+                    {filteredProdutos.length} itens encontrados
+                  </span>
+                </div>
+
+                {filteredProdutos.length === 0 ? (
+                  <div className="py-24 text-center space-y-4">
+                    <div className="bg-slate-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto">
+                      <Search className="w-8 h-8 text-slate-200" />
+                    </div>
+                    <p className="text-slate-400 font-bold">Nenhum item encontrado para sua busca.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {produtos.map((p) => (
+                      <motion.div 
+                        key={p.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col group"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div className={`p-3 rounded-2xl ${
+                            p.categoria === 'TELA' ? 'bg-blue-50 text-blue-600' : 
+                            p.categoria === 'BATERIA' ? 'bg-amber-50 text-amber-600' : 
+                            p.categoria === 'CONECTOR' || p.categoria === 'DOCK' ? 'bg-emerald-50 text-emerald-600' :
+                            p.categoria === 'TAMPA' ? 'bg-rose-50 text-rose-600' :
+                            p.categoria === 'CARCACA' ? 'bg-slate-50 text-slate-600' :
+                            'bg-blue-50 text-blue-900'
+                          }`}>
+                            {p.categoria === 'TELA' ? <Layers className="w-6 h-6" /> : 
+                             p.categoria === 'BATERIA' ? <Battery className="w-6 h-6" /> : 
+                             p.categoria === 'CONECTOR' || p.categoria === 'DOCK' ? <Wrench className="w-6 h-6" /> :
+                             p.categoria === 'TAMPA' ? <ShieldCheck className="w-6 h-6" /> :
+                             p.categoria === 'CARCACA' ? <Smartphone className="w-6 h-6" /> :
+                             <Wrench className="w-6 h-6" />}
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-300 group-hover:text-blue-400 transition-colors">
+                              {p.marca}
+                            </span>
+                            {p.nivel_dificuldade && (
+                              <span className={`text-[8px] font-black uppercase mt-1 px-2 py-0.5 rounded-full ${
+                                p.nivel_dificuldade === 'Alto' ? 'bg-red-100 text-red-600' :
+                                p.nivel_dificuldade === 'Médio' ? 'bg-amber-100 text-amber-600' :
+                                'bg-emerald-100 text-emerald-600'
+                              }`}>
+                                Dificuldade: {p.nivel_dificuldade}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex-1">
+                          <h4 className="font-black text-lg text-blue-950 mb-1 leading-tight">{p.nome_completo}</h4>
+                          <p className="text-slate-400 text-xs font-bold uppercase tracking-tighter mb-4">{p.modelo_base}</p>
+
+                          {p.exige_remocao_tela === 1 && (
+                            <div className="mb-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
+                              <Info className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                              <p className="text-[10px] font-bold text-red-600 leading-tight">
+                                ⚠ Para este modelo é necessário remover a tela para realizar o serviço.
+                              </p>
+                            </div>
+                          )}
+                          
+                          {p.categoria === 'TELA' && p.tecnologia && (
+                            <div className="flex gap-2 mb-4">
+                              <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${p.tecnologia === 'OLED' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {p.tecnologia}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="mt-6 pt-6 border-t border-slate-50 flex items-center justify-between">
+                          <div className="text-left">
+                            <p className="text-[10px] font-black text-slate-300 uppercase leading-none mb-1">Orçamento</p>
+                            <p className="text-sm font-black text-blue-900 italic">Sob Consulta</p>
+                          </div>
+                          <button 
+                            onClick={() => addToCart(p)}
+                            className="bg-blue-950 text-white p-4 rounded-2xl hover:bg-blue-600 transition-all active:scale-90 shadow-lg shadow-blue-950/10"
+                          >
+                            <ShoppingCart className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                {filteredProdutos.length > displayLimit && (
+                  <div className="flex justify-center pt-8">
+                    <button 
+                      onClick={() => setDisplayLimit(prev => prev + 24)}
+                      className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-black shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-2"
+                    >
+                      Carregar mais produtos <ArrowRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'guia' && (
+              <div className="space-y-8 animate-in fade-in duration-500">
+                {/* Care Tips Section */}
+                <div className="bg-white rounded-[3rem] p-8 md:p-12 shadow-xl border border-slate-100">
+                  <div className="flex items-center gap-4 mb-8">
+                    <div className="p-3 bg-amber-50 rounded-2xl">
+                      <Lightbulb className="w-6 h-6 text-amber-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black text-blue-950">Dicas de Cuidados</h3>
+                      <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Aumente a vida útil do seu celular</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {CARE_TIPS.map((tip, index) => (
+                      <motion.div 
+                        key={index}
+                        whileHover={{ y: -5 }}
+                        className="p-6 bg-slate-50 rounded-3xl border border-slate-100 flex gap-4"
+                      >
+                        <div className="shrink-0 mt-1">{tip.icon}</div>
+                        <div>
+                          <h4 className="font-black text-blue-950 mb-2">{tip.title}</h4>
+                          <p className="text-slate-600 text-sm leading-relaxed font-medium">{tip.description}</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-[2.5rem] p-10 md:p-14 shadow-xl border border-slate-100"
+                >
+                  <div className="space-y-12">
                   <div>
                     <h3 className="text-2xl font-black text-blue-950 mb-6 flex items-center gap-3">
                       <Smartphone className="w-6 h-6 text-blue-600" /> Tecnologias de Display
@@ -625,8 +825,9 @@ Aguardo retorno.`;
                       </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
+                  </div>
+                </motion.div>
+              </div>
             )}
           </div>
         </div>
