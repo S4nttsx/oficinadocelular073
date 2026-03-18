@@ -93,23 +93,19 @@ export default function App() {
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-      const model = ai.models.get({ model: "gemini-3-flash-preview" });
       
-      const chat = ai.chats.create({
-        model: "gemini-3-flash-preview",
-        config: {
-          systemInstruction: "Você é a Ofi, a assistente virtual inteligente da 'Oficina do Celular'. Sua missão é ajudar clientes com dúvidas sobre manutenção de celulares, peças (telas, baterias, conectores), orçamentos e cuidados com o aparelho. Seja educada, profissional e use termos técnicos de forma simples. Se não souber algo específico sobre um preço, peça para o cliente entrar em contato com o suporte humano nos botões da barra lateral. Nunca invente preços. Mantenha as respostas concisas e úteis.",
-        },
-      });
+      // Formata o histórico para o formato esperado pela API (user/model)
+      const history = chatMessages
+        .filter(m => m.role === 'user' || m.role === 'model')
+        .map(m => ({
+          role: m.role,
+          parts: [{ text: m.text }]
+        }));
 
-      // We need to pass the history to the chat
-      // The SDK expects history in a specific format if we use sendMessage
-      // But for simplicity and since we are in a turn-based environment, we can just use generateContent with context
-      
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: [
-          ...chatMessages.map(m => ({ role: m.role, parts: [{ text: m.text }] })),
+          ...history,
           { role: 'user', parts: [{ text: userMsg }] }
         ],
         config: {
