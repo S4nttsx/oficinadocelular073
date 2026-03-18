@@ -92,31 +92,37 @@ export default function App() {
     setIsTyping(true);
 
     try {
-      const apiKey = process.env.GEMINI_API_KEY || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+      // Busca a chave da API de várias fontes possíveis para garantir funcionamento em dev e prod
+      const apiKey = 
+        (typeof process !== 'undefined' && process.env.GEMINI_API_KEY) || 
+        import.meta.env.VITE_GEMINI_API_KEY || 
+        '';
+
       if (!apiKey) {
-        throw new Error("API Key não encontrada. Verifique as configurações de ambiente.");
+        throw new Error("API Key não encontrada. Verifique se a secret GEMINI_API_KEY foi configurada.");
       }
 
       const ai = new GoogleGenAI({ apiKey });
       
       // O histórico deve começar com uma mensagem do 'user' e alternar entre 'user' e 'model'
-      // Não devemos incluir a mensagem atual (userMsg) no histórico, pois ela é enviada no sendMessage
+      // O chatMessages atual contém o histórico anterior (antes da mensagem que acabamos de enviar)
       const history = [];
-      const previousMessages = chatMessages.slice(0, -1); // Pega todas as mensagens exceto a última que acabamos de adicionar
       
+      // Encontra a primeira mensagem do usuário para iniciar o histórico (obrigatório pela API)
       let firstUserIndex = -1;
-      for (let i = 0; i < previousMessages.length; i++) {
-        if (previousMessages[i].role === 'user') {
+      for (let i = 0; i < chatMessages.length; i++) {
+        if (chatMessages[i].role === 'user') {
           firstUserIndex = i;
           break;
         }
       }
 
+      // Se houver mensagens anteriores começando por um usuário, adiciona ao histórico
       if (firstUserIndex !== -1) {
-        for (let i = firstUserIndex; i < previousMessages.length; i++) {
+        for (let i = firstUserIndex; i < chatMessages.length; i++) {
           history.push({
-            role: previousMessages[i].role,
-            parts: [{ text: previousMessages[i].text }]
+            role: chatMessages[i].role,
+            parts: [{ text: chatMessages[i].text }]
           });
         }
       }
