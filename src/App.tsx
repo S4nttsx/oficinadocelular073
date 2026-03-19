@@ -92,23 +92,23 @@ export default function App() {
     setIsTyping(true);
 
     try {
-      // Busca a chave da API de várias fontes possíveis para garantir funcionamento em dev e prod
+      // Busca a chave da API. O Vite substituirá 'process.env.GEMINI_API_KEY' pelo valor real durante o build.
       const apiKey = 
-        (typeof process !== 'undefined' && process.env.GEMINI_API_KEY) || 
+        process.env.GEMINI_API_KEY || 
         import.meta.env.VITE_GEMINI_API_KEY || 
         '';
 
       if (!apiKey) {
-        throw new Error("API Key não encontrada. Verifique se a secret GEMINI_API_KEY foi configurada.");
+        throw new Error("API Key não encontrada. Certifique-se de que a secret GEMINI_API_KEY foi configurada nas configurações do projeto.");
       }
 
       const ai = new GoogleGenAI({ apiKey });
       
       // O histórico deve começar com uma mensagem do 'user' e alternar entre 'user' e 'model'
-      // O chatMessages atual contém o histórico anterior (antes da mensagem que acabamos de enviar)
       const history = [];
+      let lastRole = null;
       
-      // Encontra a primeira mensagem do usuário para iniciar o histórico (obrigatório pela API)
+      // Encontra a primeira mensagem do usuário para iniciar o histórico
       let firstUserIndex = -1;
       for (let i = 0; i < chatMessages.length; i++) {
         if (chatMessages[i].role === 'user') {
@@ -117,14 +117,24 @@ export default function App() {
         }
       }
 
-      // Se houver mensagens anteriores começando por um usuário, adiciona ao histórico
+      // Constrói o histórico garantindo alternância
       if (firstUserIndex !== -1) {
         for (let i = firstUserIndex; i < chatMessages.length; i++) {
-          history.push({
-            role: chatMessages[i].role,
-            parts: [{ text: chatMessages[i].text }]
-          });
+          const msg = chatMessages[i];
+          if (msg.role !== lastRole) {
+            history.push({
+              role: msg.role,
+              parts: [{ text: msg.text }]
+            });
+            lastRole = msg.role;
+          }
         }
+      }
+
+      // A API exige que a última mensagem do histórico seja do 'model' (ou histórico vazio)
+      // para que o sendMessage possa enviar a nova mensagem do 'user'.
+      if (history.length > 0 && history[history.length - 1].role === 'user') {
+        history.pop();
       }
 
       const chat = ai.chats.create({
@@ -140,7 +150,8 @@ export default function App() {
       setChatMessages(prev => [...prev, { role: 'model', text: aiResponse }]);
     } catch (error) {
       console.error("Erro detalhado na IA:", error);
-      setChatMessages(prev => [...prev, { role: 'model', text: "Ops! Estou com instabilidade no momento. Tente novamente em instantes ou fale com nosso suporte humano." }]);
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      setChatMessages(prev => [...prev, { role: 'model', text: `Ops! Estou com instabilidade no momento. (Erro: ${errorMessage}). Tente novamente em instantes ou fale com nosso suporte humano.` }]);
     } finally {
       setIsTyping(false);
     }
