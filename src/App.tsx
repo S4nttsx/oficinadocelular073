@@ -241,7 +241,7 @@ Aguardo retorno.`;
             </div>
             <h2 className="text-4xl md:text-6xl font-black tracking-tighter text-blue-950 uppercase leading-[0.9]">
               Peças <br />
-              <span className="text-blue-600">Originais</span>
+              <span className="text-blue-600">Premium</span>
             </h2>
             <p className="text-slate-500 text-base md:text-lg max-w-md font-medium leading-relaxed">
               Catálogo profissional de componentes com garantia técnica de 6 meses. Solicite seu orçamento online em segundos.
